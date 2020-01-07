@@ -30,8 +30,57 @@ module type CODE_GEN = sig
 end;;
 
 module Code_Gen : CODE_GEN = struct
+
+  type counter = { get : unit -> int;
+                     incr : unit -> unit };;
+
+  let rec make_fvars_tbl_single_expr expr  = 
+        let index =
+          let n = ref (-1) in
+          { get = (fun () -> !n);
+            incr = (fun () -> n:= !n +1) } in
+
+        let rec handle_expr_list expr_list = match expr_list with
+        |[] -> []
+        |car :: cdr -> let fvars_list_rec = make_fvars_tbl_single_expr car in fvars_list_rec @ handle_expr_list cdr in
+
+          match expr with
+          | Var'(VarFree(str)) -> index.incr (); [(str,index.get ())]
+          | If'(test, dit, dif) -> (make_fvars_tbl_single_expr test)@(make_fvars_tbl_single_expr dit)@(make_fvars_tbl_single_expr dif)
+          | Seq'(expr_list) -> handle_expr_list expr_list
+          | Set'(expr_var, expr_val) -> (make_fvars_tbl_single_expr expr_var)@(make_fvars_tbl_single_expr expr_val)
+          | Def'(expr_var, expr_val) -> (make_fvars_tbl_single_expr expr_var)@(make_fvars_tbl_single_expr expr_val)
+          | Or'(expr_list) -> handle_expr_list expr_list
+          | Applic'(expr, expr_list) -> (make_fvars_tbl_single_expr expr)@(handle_expr_list expr_list)
+          | ApplicTP'(expr, expr_list) -> (make_fvars_tbl_single_expr expr)@(handle_expr_list expr_list)
+          | LambdaSimple'(arg_list, body) -> make_fvars_tbl_single_expr body
+          | LambdaOpt'(arg_list, opt_arg, body) -> make_fvars_tbl_single_expr body
+          | other -> []
+          ;;
+
+  let make_fvars_tbl asts =
+      let rec make_fvars_tbl_rec asts_rec =
+        match asts_rec with
+        |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr car in fvars_list_rec @ make_fvars_tbl_rec cdr
+        |[] -> [] in
+        make_fvars_tbl_rec asts;;
+
+
+
+
+
+
   let make_consts_tbl asts = raise X_not_yet_implemented;;
-  let make_fvars_tbl asts = raise X_not_yet_implemented;;
   let generate consts fvars e = raise X_not_yet_implemented;;
+
+(* 
+  let fvar_index =
+    let n = ref -1 in
+    { get = (fun () -> !n);
+      incr = (fun () -> n:= !n +1) } in
+
+  let make_fvars_tbl_single_expr expr fvars_list = match expr with
+  | Var'(VarFree(str)) -> fvar_index.incr; fvars_list@[(str,fvar_index.get)] *)
+
 end;;
 

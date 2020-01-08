@@ -182,7 +182,10 @@ let make_consts_table sexpr_list index =
     (Sexpr(Nil), (1, "MAKE_NIL"));
     (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
     (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]@partial_const_table;;
-
+    
+let index =
+          let n = ref 6 in
+          { get_and_inc = (fun (add) -> let old = !n in n:=!n + add; old)};;
 
 
 
@@ -199,7 +202,12 @@ let make_consts_table sexpr_list index =
         |[] -> [] in
         make_fvars_tbl_rec asts;;
 
-  let make_consts_tbl asts = raise X_not_yet_implemented;;
+  let make_consts_tbl asts = (make_consts_table 
+                              (convert_sexpr_list_to_set 
+                                (expand_sexpr_list 
+                                    (convert_sexpr_list_to_set 
+                                        (exprs_to_sexpr_list asts)))) index);;
+
   let generate consts fvars e = raise X_not_yet_implemented;;
 
 (* 

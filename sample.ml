@@ -91,7 +91,57 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
 |car :: cdr -> let list_rec = remove_sexpr_duplicates car cdr in [car]@(convert_sexpr_list_to_set list_rec)
 ;;
 
-let asts = string_to_asts "(lambda (a) 5 \"hello\" #t #t () '())";;
+(* ③ Expand the list to include all sub-constants *)
+let rec expand_sub_sexpr sexpr = match sexpr with
+| Sexpr(Pair(car, cdr)) -> (expand_sub_sexpr (Sexpr car))@(expand_sub_sexpr (Sexpr cdr))@[Sexpr(Pair(car, cdr))]
+| Sexpr(TaggedSexpr(name1, expr1)) -> (expand_sub_sexpr (Sexpr expr1))@[Sexpr(TaggedSexpr(name1, expr1))]
+| Sexpr(Symbol(str)) -> (expand_sub_sexpr (Sexpr(String(str)))) @[Sexpr(Symbol(str))]
+| other -> [other];;
 
-let sexpr_list = (exprs_to_sexpr_list asts);;
-convert_sexpr_list_to_set sexpr_list;;
+let rec expand_sexpr_list sexpr_list = match sexpr_list with
+|[] -> []
+|car :: cdr -> let list_rec = expand_sub_sexpr car in list_rec@(expand_sexpr_list cdr);;
+
+(* ⑤ Go over the list, from first to last, and create the
+constants-table: *)
+(* ① For each sexpr in the list, create a 3-tuple: *)
+type counter2 = { get : int -> int;};;
+let rec make_consts_tbl_single_sexpr sexpr acc_const_table index = 
+        let get_string_size str = 9 + (String.length str) in
+        let get_sexpr_address sexpr = 
+            (string_of_int (fst (List.assoc sexpr acc_const_table))) in
+    match sexpr with
+    | Void -> [(Void,(0, "MAKE_VOID"))]
+    | Sexpr(Nil) -> Printf.printf "index: %d\n" (index.get (0));[(sexpr,(1, "MAKE_NIL"))]
+    | Sexpr(Bool(false)) -> [(sexpr, (2, "MAKE_BOOL(0)"))]
+    | Sexpr(Bool(true)) -> [(sexpr, (4, "MAKE_BOOL(1)"))]
+    | Sexpr(Number(Float f)) -> [(sexpr, (index.get (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
+    | Sexpr(Number(Int n)) -> Printf.printf "index: %d\n" (index.get (0)); [(sexpr, (index.get (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
+    | Sexpr(Char(char)) -> [(sexpr, (index.get (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
+    | Sexpr(String(str)) -> [(sexpr, (index.get (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
+    | Sexpr(Symbol(str)) -> [(sexpr, (index.get (9), "MAKE_LITERAL_SYMBOL(consts+"^(get_sexpr_address (Sexpr(String(str))))^")"))]  
+    | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "index: %d\n" (index.get (0)); [(sexpr, (index.get (17), "MAKE_LITERAL_PAIR(consts+"^(get_sexpr_address (Sexpr(sexpr1)))^", consts+"^(get_sexpr_address (Sexpr(sexpr2)))^")"))]
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> []
+    | Sexpr(TagRef(str)) -> []
+          ;;
+let rec make_consts_table sexpr_list const_table = 
+        let index =
+          let n = ref 5 in
+          { get = (fun (add) -> let old_value = !n in n:= !n +add; old_value);
+          } in 
+
+match sexpr_list with
+|[] -> []
+|car :: cdr -> let list_rec = make_consts_tbl_single_sexpr car const_table index in list_rec @ (make_consts_table cdr list_rec);;
+
+
+
+
+let asts = string_to_asts "(lambda (a) '(5 5))";;
+
+let sexpr_list = convert_sexpr_list_to_set 
+                    (expand_sexpr_list 
+                        (convert_sexpr_list_to_set 
+                            (exprs_to_sexpr_list asts)));;
+
+make_consts_table sexpr_list [];;

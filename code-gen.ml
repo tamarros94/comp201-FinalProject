@@ -111,6 +111,86 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
 |car :: cdr -> let list_rec = remove_sexpr_duplicates car cdr in [car]@(convert_sexpr_list_to_set list_rec)
 ;;
 
+(* ③+4 Expand the list to include all sub-constants *)
+let rec expand_sub_sexpr sexpr = match sexpr with
+| Sexpr(Pair(car, cdr)) -> (expand_sub_sexpr (Sexpr car))@(expand_sub_sexpr (Sexpr cdr))@[Sexpr(Pair(car, cdr))]
+| Sexpr(TaggedSexpr(name1, expr1)) -> (expand_sub_sexpr (Sexpr expr1))@[Sexpr(TaggedSexpr(name1, expr1))]
+| Sexpr(Symbol(str)) -> (expand_sub_sexpr (Sexpr(String(str)))) @[Sexpr(Symbol(str))]
+| other -> [other];;
+
+let rec expand_sexpr_list sexpr_list = match sexpr_list with
+|[] -> []
+|car :: cdr -> let list_rec = expand_sub_sexpr car in list_rec@(expand_sexpr_list cdr);;
+
+(* ⑤ Go over the list, from first to last, and create the
+constants-table: *)
+(* ① For each sexpr in the list, create a 3-tuple: *)
+type counter2 = { get_and_inc : int -> int;};;
+
+let rec make_consts_tbl_single_sexpr sexpr acc_const_table index = 
+(* Printf.printf "%s\n" (string_of_int (fst (List.nth acc_const_table))); *)
+        let get_string_size str = 9 + (String.length str) in
+        let get_sexpr_address sexpr = 
+            (string_of_int (fst (List.assoc sexpr acc_const_table))) in
+    match sexpr with
+    | Sexpr(Number(Float f)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
+    | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
+    | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
+    | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
+    | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(consts+"^(get_sexpr_address (Sexpr(String(str))))^")"))]  
+    | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(consts+"^(get_sexpr_address (Sexpr(sexpr1)))^", consts+"^(get_sexpr_address (Sexpr(sexpr2)))^")"))]
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> []
+    | Sexpr(TagRef(str)) -> []
+    | other -> []
+          ;;
+    
+let print_sexpr sexpr = match sexpr with
+    | Void -> Printf.printf "Void"
+    | Sexpr(Nil) -> Printf.printf "Sexpr(Nil)"
+    | Sexpr(Bool(false)) -> Printf.printf "Sexpr(Bool(false))"
+    | Sexpr(Bool(true)) -> Printf.printf "Sexpr(Bool(true))"
+    | Sexpr(Number(Float f)) -> Printf.printf "Sexpr(Number(Float %f))" f
+    | Sexpr(Number(Int n)) -> Printf.printf "Sexpr(Number(Int %d))" n
+    | Sexpr(Char(char)) ->   Printf.printf "Sexpr(Char(%c))" char
+    | Sexpr(String(str)) -> Printf.printf "Sexpr(String(%s))" str
+    | Sexpr(Symbol(str)) -> Printf.printf "Sexpr(Symbol(%s))" str
+    | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(sexpr1, sexpr2))" 
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr" 
+    | Sexpr(TagRef(str)) -> Printf.printf "TagRef" 
+          ;;
+
+
+
+let rec print_list = function 
+[] -> Printf.printf "()\n"
+| e::l -> print_sexpr (fst e) ; print_string " ; " ; print_list l;;
+
+let make_consts_table sexpr_list index = 
+        let rec turn_sexpr_list_to_const_table sexpr_list_rec const_table index_rec = 
+        match sexpr_list_rec with
+        |[] -> []
+        |car :: cdr -> let list_rec = (make_consts_tbl_single_sexpr car const_table index_rec) in
+        list_rec @ (turn_sexpr_list_to_const_table cdr (const_table@list_rec) index_rec) in
+
+    let partial_const_table = turn_sexpr_list_to_const_table sexpr_list     
+    [(Void, (0, "MAKE_VOID"));
+    (Sexpr(Nil), (1, "MAKE_NIL"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]
+     index in 
+     [(Void, (0, "MAKE_VOID"));
+    (Sexpr(Nil), (1, "MAKE_NIL"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]@partial_const_table;;
+
+
+
+
+
+
+
+
+
 
   let make_fvars_tbl asts =
       let rec make_fvars_tbl_rec asts_rec =
@@ -118,11 +198,6 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
         |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
         make_fvars_tbl_rec asts;;
-
-
-
-
-
 
   let make_consts_tbl asts = raise X_not_yet_implemented;;
   let generate consts fvars e = raise X_not_yet_implemented;;

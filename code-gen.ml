@@ -29,33 +29,34 @@ module type CODE_GEN = sig
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
 end;;
 
-module Code_Gen : CODE_GEN = struct
+module Code_Gen
+ (* : CODE_GEN  *)
+ = struct
 
   type counter = { get : unit -> int;
                      incr : unit -> unit };;
+            
+  type counter2 = { get_and_inc: int -> int;
+                    };;
 
   (* Create Fvar Table *)
-  let rec make_fvars_tbl_single_expr expr  = 
-        let index =
-          let n = ref (-1) in
-          { get = (fun () -> !n);
-            incr = (fun () -> n:= !n +1) } in
+  let rec make_fvars_tbl_single_expr index expr  = 
 
         let rec handle_expr_list expr_list = match expr_list with
         |[] -> []
-        |car :: cdr -> let fvars_list_rec = make_fvars_tbl_single_expr car in fvars_list_rec @ handle_expr_list cdr in
+        |car :: cdr -> let fvars_list_rec = make_fvars_tbl_single_expr index car in fvars_list_rec @ handle_expr_list cdr in
 
           match expr with
-          | Var'(VarFree(str)) -> index.incr (); [(str,index.get ())]
-          | If'(test, dit, dif) -> (make_fvars_tbl_single_expr test)@(make_fvars_tbl_single_expr dit)@(make_fvars_tbl_single_expr dif)
+          | If'(test, dit, dif) -> (make_fvars_tbl_single_expr index test)@(make_fvars_tbl_single_expr index dit)@(make_fvars_tbl_single_expr index dif)
           | Seq'(expr_list) -> handle_expr_list expr_list
-          | Set'(expr_var, expr_val) -> (make_fvars_tbl_single_expr expr_var)@(make_fvars_tbl_single_expr expr_val)
-          | Def'(expr_var, expr_val) -> (make_fvars_tbl_single_expr expr_var)@(make_fvars_tbl_single_expr expr_val)
+          | Set'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
+          | Def'(Var'(VarFree(str)), expr_val) -> index.incr (); [(str,index.get ())]@(make_fvars_tbl_single_expr index expr_val)
+          | Def'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
           | Or'(expr_list) -> handle_expr_list expr_list
-          | Applic'(expr, expr_list) -> (make_fvars_tbl_single_expr expr)@(handle_expr_list expr_list)
-          | ApplicTP'(expr, expr_list) -> (make_fvars_tbl_single_expr expr)@(handle_expr_list expr_list)
-          | LambdaSimple'(arg_list, body) -> make_fvars_tbl_single_expr body
-          | LambdaOpt'(arg_list, opt_arg, body) -> make_fvars_tbl_single_expr body
+          | Applic'(expr, expr_list) -> (make_fvars_tbl_single_expr index expr)@(handle_expr_list expr_list)
+          | ApplicTP'(expr, expr_list) -> (make_fvars_tbl_single_expr index expr)@(handle_expr_list expr_list)
+          | LambdaSimple'(arg_list, body) -> make_fvars_tbl_single_expr index body
+          | LambdaOpt'(arg_list, opt_arg, body) -> make_fvars_tbl_single_expr index body
           | other -> []
           ;;
 
@@ -111,41 +112,7 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
 |car :: cdr -> let list_rec = remove_sexpr_duplicates car cdr in [car]@(convert_sexpr_list_to_set list_rec)
 ;;
 
-(* ③+4 Expand the list to include all sub-constants *)
-let rec expand_sub_sexpr sexpr = match sexpr with
-| Sexpr(Pair(car, cdr)) -> (expand_sub_sexpr (Sexpr car))@(expand_sub_sexpr (Sexpr cdr))@[Sexpr(Pair(car, cdr))]
-| Sexpr(TaggedSexpr(name1, expr1)) -> (expand_sub_sexpr (Sexpr expr1))@[Sexpr(TaggedSexpr(name1, expr1))]
-| Sexpr(Symbol(str)) -> (expand_sub_sexpr (Sexpr(String(str)))) @[Sexpr(Symbol(str))]
-| other -> [other];;
-
-let rec expand_sexpr_list sexpr_list = match sexpr_list with
-|[] -> []
-|car :: cdr -> let list_rec = expand_sub_sexpr car in list_rec@(expand_sexpr_list cdr);;
-
-(* ⑤ Go over the list, from first to last, and create the
-constants-table: *)
-(* ① For each sexpr in the list, create a 3-tuple: *)
-type counter2 = { get_and_inc : int -> int;};;
-
-let rec make_consts_tbl_single_sexpr sexpr acc_const_table index = 
-(* Printf.printf "%s\n" (string_of_int (fst (List.nth acc_const_table))); *)
-        let get_string_size str = 9 + (String.length str) in
-        let get_sexpr_address sexpr = 
-            (string_of_int (fst (List.assoc sexpr acc_const_table))) in
-    match sexpr with
-    | Sexpr(Number(Float f)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
-    | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
-    | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
-    | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
-    | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(consts+"^(get_sexpr_address (Sexpr(String(str))))^")"))]  
-    | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(consts+"^(get_sexpr_address (Sexpr(sexpr1)))^", consts+"^(get_sexpr_address (Sexpr(sexpr2)))^")"))]
-    | Sexpr(TaggedSexpr(str, sexpr1)) -> []
-    | Sexpr(TagRef(str)) -> []
-    | other -> []
-          ;;
-    
 let print_sexpr sexpr = match sexpr with
-    | Void -> Printf.printf "Void"
     | Sexpr(Nil) -> Printf.printf "Sexpr(Nil)"
     | Sexpr(Bool(false)) -> Printf.printf "Sexpr(Bool(false))"
     | Sexpr(Bool(true)) -> Printf.printf "Sexpr(Bool(true))"
@@ -157,6 +124,110 @@ let print_sexpr sexpr = match sexpr with
     | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(sexpr1, sexpr2))" 
     | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr" 
     | Sexpr(TagRef(str)) -> Printf.printf "TagRef" 
+    | other -> Printf.printf "other" 
+          ;;
+
+let rec rename_tagged_sexpr index sexpr = 
+Printf.printf "sexpr:: ";print_sexpr sexpr; Printf.printf "\n";
+match sexpr with
+| Sexpr(TaggedSexpr(name1, expr1)) -> 
+let expr_rename = rename_tagged_sexpr index (Sexpr(expr1)) in
+  (match expr_rename with
+  | Sexpr(expr) -> Sexpr(TaggedSexpr(name1^(string_of_int (index.get ())), expr))
+  | other -> Sexpr(Nil))
+
+| Sexpr(TagRef(name1)) ->  Sexpr(TagRef(name1^(string_of_int (index.get ()))))
+| Sexpr(Pair(car, cdr)) -> 
+let car_rename = rename_tagged_sexpr index (Sexpr(car)) in
+let cdr_rename = rename_tagged_sexpr index (Sexpr(cdr)) in
+  (match car_rename, cdr_rename with
+  | Sexpr(s1), Sexpr(s2) -> Sexpr(Pair(s1, s2))
+  | other1, other2 -> Sexpr(Nil))
+| other -> other;;
+
+let rename_tagged_sexprs sexpr_list =
+    let index =
+        let n = ref 0 in
+        { get = (fun () -> !n);
+          incr = (fun () -> n:= !n +1) } in
+    let rec iterate_list sexprs = index.incr ();
+     match sexprs with
+    | [] -> []
+    | car :: cdr -> Printf.printf "index: %d car:: " (index.get ());print_sexpr car; Printf.printf "\n";
+[rename_tagged_sexpr index car]@(iterate_list cdr) in
+    iterate_list sexpr_list;;
+
+
+(* ③+4 Expand the list to include all sub-constants *)
+let rec expand_sub_sexpr index sexpr = match sexpr with
+| Sexpr(Pair(car, cdr)) -> 
+let new_car = (expand_sub_sexpr index (Sexpr car)) in
+let new_cdr = (expand_sub_sexpr index (Sexpr cdr)) in
+new_car@new_cdr@[Sexpr(Pair(car, cdr))]
+| Sexpr(TaggedSexpr(name1, expr1)) -> 
+(expand_sub_sexpr index (Sexpr expr1))@[Sexpr(TaggedSexpr(name1, expr1))]
+| Sexpr(TagRef(name1)) -> [Sexpr(TagRef(name1))]
+| Sexpr(Symbol(str)) -> (expand_sub_sexpr index (Sexpr(String(str)))) @[Sexpr(Symbol(str))]
+| other -> [other];;
+
+let expand_sexpr_list sexpr_list = 
+  let index =
+        let n = ref 0 in
+        { get = (fun () -> !n);
+          incr = (fun () -> n:= !n +1) } in
+let rec expand_sexpr sexprs = 
+  match sexprs with
+  |[] -> []
+  |car :: cdr -> let list_rec = expand_sub_sexpr index car in index.incr (); list_rec@(expand_sexpr cdr) in
+  expand_sexpr sexpr_list;;
+
+(* ⑤ Go over the list, from first to last, and create the
+constants-table: *)
+(* ① For each sexpr in the list, create a 3-tuple: *)
+let rec collect_tag_defs_single tag_defs_collection sexpr = match sexpr with
+| Sexpr(TaggedSexpr(name, expr)) -> [name, (Sexpr(expr))]
+| Sexpr(Pair(car, cdr)) -> (collect_tag_defs_single tag_defs_collection (Sexpr(car)))@(collect_tag_defs_single tag_defs_collection (Sexpr(cdr)))
+| other -> [];;
+
+
+let rec collect_tag_defs tag_defs_collection sexpr_list = match sexpr_list with
+| [] -> []
+|car :: cdr -> let list_rec = collect_tag_defs_single tag_defs_collection car in list_rec@(collect_tag_defs tag_defs_collection cdr) ;;
+
+let get_string_size str = 9 + (String.length str) ;;
+let rec get_sexpr_address tag_defs_collection first_pass acc_const_table sexpr = 
+    match sexpr with
+    | Sexpr(TagRef(str)) -> Printf.printf "%s\n" str; if first_pass then "dummy" else
+    let tagged_sexpr = List.assoc str tag_defs_collection in
+     get_sexpr_address tag_defs_collection first_pass acc_const_table tagged_sexpr
+    | other -> (string_of_int (fst (List.assoc sexpr acc_const_table))) ;;
+
+let rec make_consts_tbl_single_sexpr first_pass tag_defs_collection sexpr acc_const_table index = 
+(* Printf.printf "%s\n" (string_of_int (fst (List.nth acc_const_table))); *)
+    match sexpr with
+    | Sexpr(Number(Float f)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
+    | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
+    | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
+    | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
+    | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
+    | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> make_consts_tbl_single_sexpr first_pass tag_defs_collection (Sexpr(sexpr1)) acc_const_table index
+    | Sexpr(TagRef(str)) -> [(sexpr, (index.get_and_inc (9), "TagRef"))]   
+        | other -> [];;
+    
+let print_sexpr sexpr = match sexpr with
+    | Sexpr(Nil) -> Printf.printf "Sexpr(Nil)"
+    | Sexpr(Bool(false)) -> Printf.printf "Sexpr(Bool(false))"
+    | Sexpr(Bool(true)) -> Printf.printf "Sexpr(Bool(true))"
+    | Sexpr(Number(Float f)) -> Printf.printf "Sexpr(Number(Float %f))" f
+    | Sexpr(Number(Int n)) -> Printf.printf "Sexpr(Number(Int %d))" n
+    | Sexpr(Char(char)) ->   Printf.printf "Sexpr(Char(%c))" char
+    | Sexpr(String(str)) -> Printf.printf "Sexpr(String(%s))" str
+    | Sexpr(Symbol(str)) -> Printf.printf "Sexpr(Symbol(%s))" str
+    | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(sexpr1, sexpr2))" 
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr" 
+    | Sexpr(TagRef(str)) -> Printf.printf "TagRef" 
+    | other -> Printf.printf "other" 
           ;;
 
 
@@ -165,29 +236,27 @@ let rec print_list = function
 [] -> Printf.printf "()\n"
 | e::l -> print_sexpr (fst e) ; print_string " ; " ; print_list l;;
 
-let make_consts_table sexpr_list index = 
-        let rec turn_sexpr_list_to_const_table sexpr_list_rec const_table index_rec = 
+let make_consts_table tag_defs_collection sexpr_list index = 
+        let rec turn_sexpr_list_to_const_table first_pass sexpr_list_rec const_table index_rec = 
         match sexpr_list_rec with
         |[] -> []
-        |car :: cdr -> let list_rec = (make_consts_tbl_single_sexpr car const_table index_rec) in
-        list_rec @ (turn_sexpr_list_to_const_table cdr (const_table@list_rec) index_rec) in
+        |car :: cdr -> let list_rec = (make_consts_tbl_single_sexpr first_pass tag_defs_collection car const_table index_rec) in
+        list_rec @ (turn_sexpr_list_to_const_table first_pass cdr (const_table@list_rec) index_rec) in
 
-    let partial_const_table = turn_sexpr_list_to_const_table sexpr_list     
+    let first_pass_const_table = turn_sexpr_list_to_const_table true sexpr_list     
     [(Void, (0, "MAKE_VOID"));
     (Sexpr(Nil), (1, "MAKE_NIL"));
     (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
     (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]
-     index in 
+     index in
+     let second_pass_const_table = turn_sexpr_list_to_const_table false sexpr_list first_pass_const_table index
+
+     in 
      [(Void, (0, "MAKE_VOID"));
     (Sexpr(Nil), (1, "MAKE_NIL"));
     (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
-    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]@partial_const_table;;
-    
-let index =
-          let n = ref 6 in
-          { get_and_inc = (fun (add) -> let old = !n in n:=!n + add; old)};;
-
-
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));]@second_pass_const_table;;
+  
 
 
 
@@ -196,28 +265,35 @@ let index =
 
 
   let make_fvars_tbl asts =
+    let index =
+            let n = ref (-1) in
+            { get = (fun () -> !n);
+              incr = (fun () -> n:= !n +1) } in
       let rec make_fvars_tbl_rec asts_rec =
         match asts_rec with
-        |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr car in fvars_list_rec @ make_fvars_tbl_rec cdr
+        |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
         make_fvars_tbl_rec asts;;
 
-  let make_consts_tbl asts = (make_consts_table 
-                              (convert_sexpr_list_to_set 
-                                (expand_sexpr_list 
-                                    (convert_sexpr_list_to_set 
-                                        (exprs_to_sexpr_list asts)))) index);;
+  let make_consts_tbl asts = 
 
-  let generate consts fvars e = raise X_not_yet_implemented;;
+      let index =
+          let n = ref 6 in
+          { get_and_inc = (fun (add) -> let old = !n in n:=!n + add; old)} in
 
-(* 
-  let fvar_index =
-    let n = ref -1 in
-    { get = (fun () -> !n);
-      incr = (fun () -> n:= !n +1) } in
+      let sexpr_set = (convert_sexpr_list_to_set 
+                        (expand_sexpr_list 
+                         (rename_tagged_sexprs
+                            (convert_sexpr_list_to_set 
+                                (exprs_to_sexpr_list asts))))) in
+      let tag_defs_collection = collect_tag_defs [] sexpr_set in
+      
+       (* tag_defs_collection;; *)
+      make_consts_table tag_defs_collection sexpr_set index;;
 
-  let make_fvars_tbl_single_expr expr fvars_list = match expr with
-  | Var'(VarFree(str)) -> fvar_index.incr; fvars_list@[(str,fvar_index.get)] *)
+  let generate consts fvars e = "";;
+  (* match e with
+  | Const'(c) -> "mov rax, AddressInConstTable(c)" (string_of_int (fst (List.assoc c consts))) *)
 
 end;;
 

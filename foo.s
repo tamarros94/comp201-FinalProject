@@ -1,4 +1,4 @@
-Sexpr set: Sexpr(Bool(false)) ; Sexpr(Bool(true)) ; Sexpr(Number(Int 1)) ; Sexpr(Number(Int 3)) ; ()
+Sexpr set: Sexpr(Bool(false)) ; Sexpr(Bool(true)) ; Sexpr(Number(Int 4)) ; Sexpr(Number(Int 5)) ; ()
 
 
 ;;; All the macros and the scheme-object printing procedure
@@ -16,8 +16,8 @@ MAKE_VOID
 MAKE_NIL
 MAKE_BOOL(0)
 MAKE_BOOL(1)
-MAKE_LITERAL_INTEGER(1)
-MAKE_LITERAL_INTEGER(3)
+MAKE_LITERAL_INTEGER(4)
+MAKE_LITERAL_INTEGER(5)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -59,35 +59,36 @@ main:
 ;GENERATE CONST:
  mov rax, 2
 
-cmp rax, sob_false
+cmp rax, SOB_FALSE_ADDRESS
     jne Lexit1 
 
 ;GENERATE CONST:
  mov rax, 4
 
-cmp rax, sob_false
+cmp rax, SOB_FALSE_ADDRESS
     jne Lexit1 
 
 Lexit1:
 
-
 	call write_sob_if_not_void
 
-;GENERATE OR:
+;GENERATE IF:
+;GENERATE CONST:
+ mov rax, 4
+
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse2
 ;GENERATE CONST:
  mov rax, 6
 
-cmp rax, sob_false
-    jne Lexit2 
 
+jmp Lexit2
+Lelse2:
 ;GENERATE CONST:
  mov rax, 15
 
-cmp rax, sob_false
-    jne Lexit2 
 
 Lexit2:
-
 
 	call write_sob_if_not_void
 

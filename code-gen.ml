@@ -306,8 +306,8 @@ let make_consts_table tag_defs_collection sexpr_list =
 
   let generate_bound_get major minor = 
     ";GENERATE BOUND GET:\n" ^
-    "mov rax, qword [rbp + 8 ∗ 2] \n
-    mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"] \n
+    "mov rax, qword [rbp + 8 ∗ 2]
+    mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"]
     mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n\n";;
 
   let generate_fvar fvars v = 
@@ -346,23 +346,23 @@ let make_consts_table tag_defs_collection sexpr_list =
     let generated_expr = generate_wrap consts fvars expr in
     ";GENERATE PARAM SET:\n" ^
     generated_expr ^
-    "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax \n
-    mov rax, sob_void \n\n"
+    "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax
+    mov rax, SOB_VOID_ADDRESS \n\n"
   and generate_bound_set consts fvars major minor expr =
     let generated_expr = generate_wrap consts fvars expr in
     ";GENERATE BOUND SET:\n" ^
     generated_expr ^
-    "mov rbx, qword [rbp + 8 ∗ 2] \n
-    mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"] \n
-    mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax \n
-    mov rax, sob_void \n\n"
+    "mov rbx, qword [rbp + 8 ∗ 2]
+    mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"]
+    mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax
+    mov rax, SOB_VOID_ADDRESS \n\n"
   and generate_fvar_set consts fvars v expr =
     let generated_expr = generate_wrap consts fvars expr in
     let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR SET:\n" ^
     generated_expr ^
-    "mov qword ["^label_in_fvar_table^"], rax \n
-    mov rax, sob_void \n\n"
+    "mov qword ["^label_in_fvar_table^"], rax
+    mov rax, SOB_VOID_ADDRESS \n\n"
   and generate_seq consts fvars expr_list =
     (* ";GENERATE SEQUENCE:\n" ^ *)
     (List.fold_right (fun a b -> (generate_wrap consts fvars) a ^  b) expr_list "")
@@ -371,12 +371,29 @@ let make_consts_table tag_defs_collection sexpr_list =
     let curr_index = label_index.get () in
     let or_fold_fun = (fun a b -> 
     ((generate_wrap consts fvars) a) ^
-    "cmp rax, sob_false
+    "cmp rax, SOB_FALSE_ADDRESS
     jne Lexit"^string_of_int curr_index^" \n\n" ^  b) in
     ";GENERATE OR:\n" ^
     List.fold_right or_fold_fun expr_list ""
-    ^"Lexit" ^(string_of_int curr_index) ^ ":\n\n"
-  and generate_if consts fvars expr1 expr2 expr3 = ""
+    ^"Lexit" ^(string_of_int curr_index) ^ ":\n"
+  and generate_if consts fvars test dit dif = 
+    label_index.incr ();
+    let curr_index = label_index.get () in
+    let generated_test = generate_wrap consts fvars test in
+    let generated_dit = generate_wrap consts fvars dit in
+    let generated_dif = generate_wrap consts fvars dif in
+    ";GENERATE IF:\n" ^
+    generated_test ^
+    "cmp rax, SOB_FALSE_ADDRESS
+    je Lelse"^string_of_int curr_index ^ "\n" ^
+    generated_dit ^ "\n" ^
+    "jmp Lexit"^string_of_int curr_index^"\n" ^
+    "Lelse"^string_of_int curr_index^":\n" ^
+    generated_dif ^ "\n" ^
+    "Lexit"^string_of_int curr_index^":\n"
+
+
+
   ;;
 
 

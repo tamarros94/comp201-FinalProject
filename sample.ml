@@ -6,31 +6,20 @@ let string_to_asts s = List.map Semantics.run_semantics
                             (Reader.read_sexprs s));;
 
 let asts = (string_to_asts 
-"(define y '(#{a}=#t #{a}))");;
+"5 #t (+ 1 2) a");;
 
 
-make_consts_tbl asts;;
+  let consts_tbl = Printf.printf "consts_tbl\n";Code_Gen.make_consts_tbl asts ;;
+  let fvars_tbl = Printf.printf "fvars_tbl\n"; Code_Gen.make_fvars_tbl asts ;;
+  let generate = Code_Gen.generate consts_tbl fvars_tbl ;;
+  (List.map
+                           (fun ast -> (generate ast) ^ "\n\tcall write_sob_if_not_void")
+                           asts)
 
-  (* let generate consts fvars e = match e with
-  | Const'(constant)
-  | Var'(var)
-  | Box'(var)
-  | BoxGet'(var)
-  | BoxSet'(var,expr)
-  | If'(expr1,expr2,expr3)
-  | Seq'(expr_list)
-  | Set'(expr1,expr2)
-  | Def'(expr1,expr2)
-  | Or'(expr_list)
-  | LambdaSimple'(string_list,expr)
-  | LambdaOpt'(string_list,string,expr)
-  | Applic'(expr,expr_list)
-  | ApplicTP'(expr,expr_list);; *)
   
   
   
   
-  ;;
   (* match e with
   | Const'(c) -> "mov rax, AddressInConstTable(c)" (string_of_int (fst (List.assoc c consts))) *)
 

@@ -127,7 +127,7 @@ let rec print_sexpr sexpr = match sexpr with
     | other -> Printf.printf "other" 
           ;;
 
-let rec rename_tagged_sexpr index sexpr = Printf.printf "INDEX: %d\n" (index.get ());
+let rec rename_tagged_sexpr index sexpr = 
 match sexpr with
 | Sexpr(TaggedSexpr(name1, expr1)) -> 
 let expr_rename = rename_tagged_sexpr index (Sexpr(expr1)) in
@@ -152,7 +152,7 @@ let rename_tagged_sexprs sexpr_list =
     let rec iterate_list sexprs = 
      match sexprs with
     | [] -> []
-    | car :: cdr -> Printf.printf "index: %d ; Sexpr: " (index.get ()); print_sexpr car; Printf.printf "\n"; 
+    | car :: cdr ->
     let renamed = [rename_tagged_sexpr index car] in index.incr ();
     renamed@(iterate_list cdr) in
     iterate_list sexpr_list;;
@@ -277,6 +277,7 @@ let make_consts_table tag_defs_collection sexpr_list =
         match asts_rec with
         |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
+        Printf.printf "make_fvars_tbl\n";
         make_fvars_tbl_rec asts;;
 
   let make_consts_tbl asts =
@@ -292,29 +293,32 @@ let make_consts_table tag_defs_collection sexpr_list =
        (* tag_defs_collection;; *)
       make_consts_table tag_defs_collection sexpr_set;;
 
-  let generate consts fvars e = "";;
-  (* match e with
-  | Const'(c) -> "mov rax, AddressInConstTable(c)" (string_of_int (fst (List.assoc c consts))) *)
+
+
+  let rec generate_const consts const = 
+   Printf.printf "generate_const: "; print_sexpr const; 
+    let const_address = (string_of_int (fst (List.assoc const consts))) in
+    ";generate_const:\n" ^
+    " mov rax, " ^ const_address ^ "\n";;
+
+
+
+  let generate consts fvars e = match e with
+  | Const'(const) -> generate_const consts const
+  (* | Var'(var)
+  | Box'(var)
+  | BoxGet'(var)
+  | BoxSet'(var,expr)
+  | If'(expr1,expr2,expr3)
+  | Seq'(expr_list)
+  | Set'(expr1,expr2)
+  | Def'(expr1,expr2)
+  | Or'(expr_list)
+  | LambdaSimple'(string_list,expr)
+  | LambdaOpt'(string_list,string,expr)
+  | Applic'(expr,expr_list)
+  | ApplicTP'(expr,expr_list) *)
+  | other -> "";;
 
 end;;
-
-(* 
-				((itIs? 'const pe) (let ((label (get_label (cadr pe) const_table )))
-										(string-append "\tmov rax , [" label "]\n")))
-				((itIs? 'seq pe) (code_gen_seq (cadr pe) env))
-				((itIs? 'if3 pe) (code_gen_if (cdr pe) (get_label_counter 'count_label_if) env))
-				((itIs? 'or pe) (code_gen_or (cadr pe) (get_label_counter 'count_label_or) env))
-				((itIs? 'pvar pe) (let ((minor (number->string (caddr pe))))
-										(string-append "\tmov rax , qword [rbp + (4 + " minor ") * 8 ]\n")))
-				((itIs? 'bvar pe) (code_gen_bvar (cdr pe) env))
-				((itIs? 'fvar pe) (code_gen_fvar (cdr pe) env))
-				((itIs? 'define pe) (code_gen_def (cdr pe) env))
-				((itIs? 'set pe) (code_gen_set (cdr pe) env))
-				((itIs? 'lambda-simple pe) (code_gen_lambda_simple (cdr pe) (get_label_counter 'count_label_lambda) (+ env 1)) )
-				((itIs? 'lambda-opt pe) (code_gen_lambda_opt (cdr pe) (get_label_counter 'counter_label_lambda_opt) (+ env 1)))
-				((itIs? 'applic pe) (code_gen_applic (cdr pe) (get_label_counter 'counter_label_applic) env))
-				((itIs? 'tc-applic pe) (code_gen_tc_applic (cdr pe) (get_label_counter 'counter_label_Tc-applic) env))
-				((itIs? 'box pe) (code_gen_box (cdr pe) env))
-				((itIs? 'box-set pe) (code_gen_box_set (cdr pe) env))
-				((itIs? 'box-get pe) (code_gen_box_get (cdr pe) env)) *)
 

@@ -6,15 +6,15 @@ let string_to_asts s = List.map Semantics.run_semantics
                             (Reader.read_sexprs s));;
 
 let asts = (string_to_asts 
-"5 #t (+ 1 2) a");;
+"(or #f #t) (or #f #t)");;
 
-
-  let consts_tbl = Printf.printf "consts_tbl\n";Code_Gen.make_consts_tbl asts ;;
-  let fvars_tbl = Printf.printf "fvars_tbl\n"; Code_Gen.make_fvars_tbl asts ;;
+  let consts_tbl = Code_Gen.make_consts_tbl asts ;;
+  let fvars_tbl = Code_Gen.make_fvars_tbl asts ;;
   let generate = Code_Gen.generate consts_tbl fvars_tbl ;;
-  (List.map
+String.concat "\n\n"
+                        (List.map
                            (fun ast -> (generate ast) ^ "\n\tcall write_sob_if_not_void")
-                           asts)
+                           asts) ;;
 
   
   

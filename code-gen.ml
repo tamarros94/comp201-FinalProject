@@ -277,7 +277,7 @@ let make_consts_table tag_defs_collection sexpr_list =
         match asts_rec with
         |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
-        Printf.printf "make_fvars_tbl\n";
+        
         make_fvars_tbl_rec asts;;
 
   let make_consts_tbl asts =
@@ -295,30 +295,93 @@ let make_consts_table tag_defs_collection sexpr_list =
 
 
 
-  let rec generate_const consts const = 
-   Printf.printf "generate_const: "; print_sexpr const; 
+  let generate_const consts const = 
     let const_address = (string_of_int (fst (List.assoc const consts))) in
-    ";generate_const:\n" ^
-    " mov rax, " ^ const_address ^ "\n";;
+    ";GENERATE CONST:\n" ^
+    " mov rax, " ^ const_address ^ "\n\n";;
+
+  let generate_param_get minor = 
+    ";GENERATE PARAM GET:\n" ^
+    "mov rax, qword [rbp + 8 ∗ (4 + "^ string_of_int minor ^")] \n\n";;
+
+  let generate_bound_get major minor = 
+    ";GENERATE BOUND GET:\n" ^
+    "mov rax, qword [rbp + 8 ∗ 2] \n
+    mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"] \n
+    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n\n";;
+
+  let generate_fvar fvars v = 
+    let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
+    ";GENERATE FVAR:\n" ^
+    "mov rax, qword ["^label_in_fvar_table^"] \n\n";;
+
+  let label_index =
+    let n = ref 0 in
+    { get = (fun () -> !n);
+      incr = (fun () -> n:= !n +1) } 
+
+  let rec generate_wrap consts fvars e = match e with
+    | Const'(const) -> generate_const consts const
+    | Var'(VarParam(_, minor)) -> generate_param_get minor
+    | Set'(Var'(VarParam(_, minor)),expr) -> generate_param_set consts fvars minor expr
+    | Var'(VarBound(_, major, minor)) -> generate_bound_get major minor
+    | Set'(Var'(VarBound(_,major,minor)),expr) -> generate_bound_set consts fvars major minor expr
+    | Var'(VarFree(v)) -> generate_fvar fvars v
+    | Set'(Var'(VarFree(v)),expr) -> generate_fvar_set consts fvars v expr
+    | Seq'(expr_list) -> generate_seq consts fvars expr_list
+    | Or'(expr_list) -> generate_or consts fvars expr_list
+    | If'(expr1,expr2,expr3) -> generate_if consts fvars expr1 expr2 expr3
+    (* | Var'(var) *)
+    (* | Box'(var) *)
+    (* | BoxGet'(var) *)
+    (* | BoxSet'(var,expr) *)
+    (* | Set'(expr1,expr2) *)
+    (* | Def'(expr1,expr2) *)
+    (* | LambdaSimple'(string_list,expr) *)
+    (* | LambdaOpt'(string_list,string,expr) *)
+    (* | Applic'(expr,expr_list) *)
+    (* | ApplicTP'(expr,expr_list) *)
+    | other -> ""
+  and generate_param_set consts fvars minor expr =
+    let generated_expr = generate_wrap consts fvars expr in
+    ";GENERATE PARAM SET:\n" ^
+    generated_expr ^
+    "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax \n
+    mov rax, sob_void \n\n"
+  and generate_bound_set consts fvars major minor expr =
+    let generated_expr = generate_wrap consts fvars expr in
+    ";GENERATE BOUND SET:\n" ^
+    generated_expr ^
+    "mov rbx, qword [rbp + 8 ∗ 2] \n
+    mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"] \n
+    mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax \n
+    mov rax, sob_void \n\n"
+  and generate_fvar_set consts fvars v expr =
+    let generated_expr = generate_wrap consts fvars expr in
+    let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
+    ";GENERATE FVAR SET:\n" ^
+    generated_expr ^
+    "mov qword ["^label_in_fvar_table^"], rax \n
+    mov rax, sob_void \n\n"
+  and generate_seq consts fvars expr_list =
+    (* ";GENERATE SEQUENCE:\n" ^ *)
+    (List.fold_right (fun a b -> (generate_wrap consts fvars) a ^  b) expr_list "")
+  and generate_or consts fvars expr_list =
+    label_index.incr ();
+    let curr_index = label_index.get () in
+    let or_fold_fun = (fun a b -> 
+    ((generate_wrap consts fvars) a) ^
+    "cmp rax, sob_false
+    jne Lexit"^string_of_int curr_index^" \n\n" ^  b) in
+    ";GENERATE OR:\n" ^
+    List.fold_right or_fold_fun expr_list ""
+    ^"Lexit" ^(string_of_int curr_index) ^ ":\n\n"
+  and generate_if consts fvars expr1 expr2 expr3 = ""
+  ;;
 
 
 
-  let generate consts fvars e = match e with
-  | Const'(const) -> generate_const consts const
-  (* | Var'(var)
-  | Box'(var)
-  | BoxGet'(var)
-  | BoxSet'(var,expr)
-  | If'(expr1,expr2,expr3)
-  | Seq'(expr_list)
-  | Set'(expr1,expr2)
-  | Def'(expr1,expr2)
-  | Or'(expr_list)
-  | LambdaSimple'(string_list,expr)
-  | LambdaOpt'(string_list,string,expr)
-  | Applic'(expr,expr_list)
-  | ApplicTP'(expr,expr_list) *)
-  | other -> "";;
+  let generate consts fvars e = generate_wrap consts fvars e;;
 
 end;;
 

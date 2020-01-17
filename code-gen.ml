@@ -331,10 +331,11 @@ let make_consts_table tag_defs_collection sexpr_list =
     | Seq'(expr_list) -> generate_seq consts fvars expr_list
     | Or'(expr_list) -> generate_or consts fvars expr_list
     | If'(expr1,expr2,expr3) -> generate_if consts fvars expr1 expr2 expr3
+    | BoxGet'(var) -> generate_box_get consts fvars var
+    | BoxSet'(var,expr) -> generate_box_set consts fvars var expr
+
     (* | Var'(var) *)
     (* | Box'(var) *)
-    (* | BoxGet'(var) *)
-    (* | BoxSet'(var,expr) *)
     (* | Set'(expr1,expr2) *)
     (* | Def'(expr1,expr2) *)
     (* | LambdaSimple'(string_list,expr) *)
@@ -391,8 +392,20 @@ let make_consts_table tag_defs_collection sexpr_list =
     "Lelse"^string_of_int curr_index^":\n" ^
     generated_dif ^ "\n" ^
     "Lexit"^string_of_int curr_index^":\n"
-
-
+  and  generate_box_get consts fvars var = 
+    let generated_var = generate_wrap consts fvars (Var'(var)) in
+    ";GENERATE BOX GET:\n" ^
+    generated_var ^
+    "mov rax, qword [rax]\n\n"
+and  generate_box_set consts fvars var expr = 
+    let generated_expr = generate_wrap consts fvars expr in
+    let generated_var = generate_wrap consts fvars (Var'(var)) in
+    ";GENERATE BOX SET:\n" ^
+    generated_expr ^
+    "push rax \n" ^
+    generated_var ^
+    "pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS \n\n"
 
   ;;
 

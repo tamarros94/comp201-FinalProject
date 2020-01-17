@@ -298,91 +298,88 @@ let make_consts_table tag_defs_collection sexpr_list =
   let generate_const consts const = 
     let const_address = (string_of_int (fst (List.assoc const consts))) in
     ";GENERATE CONST:\n" ^
-    " mov rax, " ^ const_address ^ "\n\n";;
+    " mov rax, " ^ const_address ^ "\n <end const> \n";;
 
   let generate_param_get minor = 
     ";GENERATE PARAM GET:\n" ^
-    "mov rax, qword [rbp + 8 ∗ (4 + "^ string_of_int minor ^")] \n\n";;
+    "mov rax, qword [rbp + 8 ∗ (4 + "^ string_of_int minor ^")] \n <end param get> \n";;
 
   let generate_bound_get major minor = 
     ";GENERATE BOUND GET:\n" ^
     "mov rax, qword [rbp + 8 ∗ 2]
     mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"]
-    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n\n";;
+    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n <end bound get> \n";;
 
   let generate_fvar fvars v = 
     let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR:\n" ^
-    "mov rax, qword ["^label_in_fvar_table^"] \n\n";;
+    "mov rax, qword ["^label_in_fvar_table^"] \n <end fvar> \n";;
 
   let label_index =
     let n = ref 0 in
     { get = (fun () -> !n);
       incr = (fun () -> n:= !n +1) } 
 
-  let rec generate_wrap consts fvars e = match e with
-    | Const'(const) -> generate_const consts const
+  let rec generate_wrap env_size consts fvars e = match e with
+    | Const'(const) -> generate_const env_size consts const
     | Var'(VarParam(_, minor)) -> generate_param_get minor
-    | Set'(Var'(VarParam(_, minor)),expr) -> generate_param_set consts fvars minor expr
+    | Set'(Var'(VarParam(_, minor)),expr) -> generate_param_set env_size consts fvars minor expr
     | Var'(VarBound(_, major, minor)) -> generate_bound_get major minor
-    | Set'(Var'(VarBound(_,major,minor)),expr) -> generate_bound_set consts fvars major minor expr
+    | Set'(Var'(VarBound(_,major,minor)),expr) -> generate_bound_set env_size consts fvars major minor expr
     | Var'(VarFree(v)) -> generate_fvar fvars v
-    | Set'(Var'(VarFree(v)),expr) -> generate_fvar_set consts fvars v expr
-    | Seq'(expr_list) -> generate_seq consts fvars expr_list
-    | Or'(expr_list) -> generate_or consts fvars expr_list
-    | If'(expr1,expr2,expr3) -> generate_if consts fvars expr1 expr2 expr3
-    | BoxGet'(var) -> generate_box_get consts fvars var
-    | BoxSet'(var,expr) -> generate_box_set consts fvars var expr
-
-    (* | Var'(var) *)
-    (* | Box'(var) *)
-    (* | Set'(expr1,expr2) *)
-    (* | Def'(expr1,expr2) *)
-    (* | LambdaSimple'(string_list,expr) *)
+    | Set'(Var'(VarFree(v)),expr) -> generate_fvar_set env_size consts fvars v expr
+    | Def'(Var'(var),expr) -> generate_def env_size consts fvars var expr
+    | Seq'(expr_list) -> generate_seq env_size consts fvars expr_list
+    | Or'(expr_list) -> generate_or env_size consts fvars expr_list
+    | If'(expr1,expr2,expr3) -> generate_if env_size consts fvars expr1 expr2 expr3
+    | BoxGet'(var) -> generate_box_get env_size consts fvars var
+    | BoxSet'(var,expr) -> generate_box_set env_size consts fvars var expr
+    | Box'(var) -> generate_box env_size consts fvars var
+    | LambdaSimple'(string_list,body) -> generate_simple_lambda env_size consts fvars string_list body
     (* | LambdaOpt'(string_list,string,expr) *)
     (* | Applic'(expr,expr_list) *)
     (* | ApplicTP'(expr,expr_list) *)
     | other -> ""
-  and generate_param_set consts fvars minor expr =
-    let generated_expr = generate_wrap consts fvars expr in
+  and generate_param_set env_size consts fvars minor expr =
+    let generated_expr = generate_wrap env_size env_size consts fvars expr in
     ";GENERATE PARAM SET:\n" ^
     generated_expr ^
     "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax
-    mov rax, SOB_VOID_ADDRESS \n\n"
-  and generate_bound_set consts fvars major minor expr =
-    let generated_expr = generate_wrap consts fvars expr in
+    mov rax, SOB_VOID_ADDRESS \n <end param set> \n"
+  and generate_bound_set env_size consts fvars major minor expr =
+    let generated_expr = generate_wrap env_size env_size consts fvars expr in
     ";GENERATE BOUND SET:\n" ^
     generated_expr ^
     "mov rbx, qword [rbp + 8 ∗ 2]
     mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"]
     mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax
-    mov rax, SOB_VOID_ADDRESS \n\n"
-  and generate_fvar_set consts fvars v expr =
-    let generated_expr = generate_wrap consts fvars expr in
-    let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
+    mov rax, SOB_VOID_ADDRESS \n <end bound set> \n"
+  and generate_fvar_set env_size consts fvars v expr =
+    let generated_expr = generate_wrap env_size consts fvars expr in
+    let index_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR SET:\n" ^
     generated_expr ^
-    "mov qword ["^label_in_fvar_table^"], rax
-    mov rax, SOB_VOID_ADDRESS \n\n"
-  and generate_seq consts fvars expr_list =
+    "mov qword ["^index_in_fvar_table^"], rax
+    mov rax, SOB_VOID_ADDRESS \n <end fvar set> \n"
+  and generate_seq env_size consts fvars expr_list =
     (* ";GENERATE SEQUENCE:\n" ^ *)
-    (List.fold_right (fun a b -> (generate_wrap consts fvars) a ^  b) expr_list "")
-  and generate_or consts fvars expr_list =
+    (List.fold_right (fun a b -> (generate_wrap env_size consts fvars) a ^  b) expr_list "")
+  and generate_or env_size consts fvars expr_list =
     label_index.incr ();
     let curr_index = label_index.get () in
     let or_fold_fun = (fun a b -> 
-    ((generate_wrap consts fvars) a) ^
+    ((generate_wrap env_size consts fvars) a) ^
     "cmp rax, SOB_FALSE_ADDRESS
     jne Lexit"^string_of_int curr_index^" \n\n" ^  b) in
     ";GENERATE OR:\n" ^
     List.fold_right or_fold_fun expr_list ""
-    ^"Lexit" ^(string_of_int curr_index) ^ ":\n"
-  and generate_if consts fvars test dit dif = 
+    ^"Lexit" ^(string_of_int curr_index) ^ ":\n <end or> \n"
+  and generate_if env_size consts fvars test dit dif = 
     label_index.incr ();
     let curr_index = label_index.get () in
-    let generated_test = generate_wrap consts fvars test in
-    let generated_dit = generate_wrap consts fvars dit in
-    let generated_dif = generate_wrap consts fvars dif in
+    let generated_test = generate_wrap env_size consts fvars test in
+    let generated_dit = generate_wrap env_size consts fvars dit in
+    let generated_dif = generate_wrap env_size consts fvars dif in
     ";GENERATE IF:\n" ^
     generated_test ^
     "cmp rax, SOB_FALSE_ADDRESS
@@ -391,27 +388,44 @@ let make_consts_table tag_defs_collection sexpr_list =
     "jmp Lexit"^string_of_int curr_index^"\n" ^
     "Lelse"^string_of_int curr_index^":\n" ^
     generated_dif ^ "\n" ^
-    "Lexit"^string_of_int curr_index^":\n"
-  and  generate_box_get consts fvars var = 
-    let generated_var = generate_wrap consts fvars (Var'(var)) in
+    "Lexit"^string_of_int curr_index^":\n <end if> \n"
+  and  generate_box_get env_size consts fvars var = 
+    let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
     ";GENERATE BOX GET:\n" ^
     generated_var ^
-    "mov rax, qword [rax]\n\n"
-and  generate_box_set consts fvars var expr = 
-    let generated_expr = generate_wrap consts fvars expr in
-    let generated_var = generate_wrap consts fvars (Var'(var)) in
+    "mov rax, qword [rax] \n <end box get> \n"
+  and  generate_box_set env_size consts fvars var expr = 
+    let generated_expr = generate_wrap env_size consts fvars expr in
+    let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
     ";GENERATE BOX SET:\n" ^
     generated_expr ^
     "push rax \n" ^
     generated_var ^
     "pop qword [rax]
-    mov rax, SOB_VOID_ADDRESS \n\n"
+    mov rax, SOB_VOID_ADDRESS \n <end box set> \n"
+  and generate_box env_size consts fvars var = 
+  let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
+  "malloc r8, 8 \n" ^
+   generated_var ^
+   "mov qword [r8], rax
+   mov rax, r8 \n <end box> \n"
+  and generate_def env_size consts fvars var expr = 
+  ";GENERATE DEFINE\n" ^
+  (match var with
+    |VarBound(_,major,minor) -> generate_bound_set env_size consts fvars major minor expr
+    |VarParam(_, minor) -> generate_param_set env_size consts fvars minor expr
+    |VarFree(v) -> generate_fvar_set env_size consts fvars v expr
+  ) ^ "\n <end define> \n"
+  and generate_simple_lambda env_size consts fvars string_list body =
+    label_index.incr ();
+    let curr_index = label_index.get () in
+    
 
   ;;
 
 
 
-  let generate consts fvars e = generate_wrap consts fvars e;;
+  let generate consts fvars e = generate_wrap 0 consts fvars e;;
 
 end;;
 

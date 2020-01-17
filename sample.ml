@@ -6,7 +6,7 @@ let string_to_asts s = List.map Semantics.run_semantics
                             (Reader.read_sexprs s));;
 
 let asts = (string_to_asts 
-"(or #f #t) (or #f #t)");;
+"(define a 5)");;
 
   let consts_tbl = Code_Gen.make_consts_tbl asts ;;
   let fvars_tbl = Code_Gen.make_fvars_tbl asts ;;

@@ -1,2 +1,1 @@
-(or #f #t)
-(if #t 4 5)
+(define a 5)

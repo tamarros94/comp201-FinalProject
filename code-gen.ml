@@ -334,8 +334,8 @@ let make_consts_table tag_defs_collection sexpr_list =
     | BoxGet'(var) -> generate_box_get env_size consts fvars var
     | BoxSet'(var,expr) -> generate_box_set env_size consts fvars var expr
     | Box'(var) -> generate_box env_size consts fvars var
-    | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body
-    (* | LambdaOpt'(string_list,string,expr) *)
+    | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body false
+    | LambdaOpt'(string_list,string,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body true
     | Applic'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
     (* | ApplicTP'(expr,expr_list) *)
     | other -> ""
@@ -416,9 +416,9 @@ let make_consts_table tag_defs_collection sexpr_list =
     |VarParam(_, minor) -> generate_param_set env_size consts fvars minor expr
     |VarFree(v) -> generate_fvar_set env_size consts fvars v expr
   ) ^ "\n ;<end define> \n"
-  and generate_simple_lambda env_size consts fvars string_list body =
+  and generate_simple_lambda env_size consts fvars string_list body opt_flag =
     label_index.incr ();
-    if env_size=0 then generate_first_simple_lambda env_size consts fvars string_list body else
+    if env_size=0 then generate_first_simple_lambda env_size consts fvars string_list body opt_flag else
     let curr_index = label_index.get () in 
     let generated_body = generate_wrap env_size consts fvars body in
     let allocate_env_code =
@@ -520,8 +520,40 @@ let make_consts_table tag_defs_collection sexpr_list =
     add rsp , rbx; pop args\n ;<end applic> \n" in
     ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr
     ^ push_env ^ execute_code ^ clean_stack 
+    and generate_opt_lambda env_size consts fvars string_list body label_index =
+      let save_n = "mov r8, qword [rbp+8*3] \n" in
+      let save_expected_args = "mov r9, "^string_of_int (List.length string_list) ^"\n" in
+      let opt_list_size = 
+      "mov r10, r8
+      sub r10, r9 ; list size = n - expected args
+      cmp r10, 0
+      je end_lambda_opt_"^ (string_of_int label_index) ^"\n"
+       in
+      let first_unexpected = 
+      "mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      mov rcx, 8
+      mul rcx ; rax = (expected+4)*8
+      add rax, rbp
+      mov r11, qword [rax] ; r11 points to first unexpected arg\n" in
+      let allocate_opt_list =
+          "MALLOC rax, r10 \n
+          mov rcx, r10
+          build_opt_list_" ^(string_of_int label_index)^":
+          mov r12, qword [r11]
+          mov [rax], r12
+          add r12, 8
+          add rax, 8
+          loop build_opt_list_" ^(string_of_int label_index)^"
+          end_lambda_opt_"^ (string_of_int label_index) ^"\n"
+          (* need to have r11 point at list at rax*)
+          (* need to update lambda to include this if opt flag is set*)
 
-      ;;
+
+
+          
+          
+           in
 
 
 

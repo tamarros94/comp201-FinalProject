@@ -1,1 +1,1 @@
-(lambda (a) a)
+(let ((a 5)) ((lambda (b) b) 2) ((lambda (b) b) 2) )

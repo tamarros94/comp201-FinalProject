@@ -26,6 +26,22 @@
 %define MB(n) 1024*KB(n)
 %define GB(n) 1024*MB(n)
 
+%define MAKE_NIL db T_NIL
+%define MAKE_VOID db T_VOID
+%define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val
+%define MAKE_LITERAL_INTEGER(val) MAKE_LITERAL T_INTEGER, dq val
+%define MAKE_LITERAL_FLOAT(val) MAKE_LITERAL T_FLOAT, dq val
+%define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
+%define MAKE_LITERAL_SYMBOL(val) MAKE_LITERAL T_SYMBOL, dq val
+
+%macro MAKE_LITERAL_STRING 1
+db T_STRING
+dq (%%end_str - %%str)
+%%str:
+db %1
+%%end_str:
+%endmacro
+
 
 %macro SKIP_TYPE_TAG 2
 	mov %1, qword [%2+TYPE_SIZE]	

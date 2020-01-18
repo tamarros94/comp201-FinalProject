@@ -214,7 +214,7 @@ let rec make_consts_tbl_single_sexpr first_pass tag_defs_collection sexpr acc_co
     | Sexpr(Number(Float f)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
     | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
     | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
-    | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
+    | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING \""^str^"\""))]   
     | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
     | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
     | Sexpr(TaggedSexpr(str, sexpr1)) -> make_consts_tbl_single_sexpr first_pass tag_defs_collection (Sexpr(sexpr1)) acc_const_table index
@@ -336,7 +336,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     | Box'(var) -> generate_box env_size consts fvars var
     | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body
     (* | LambdaOpt'(string_list,string,expr) *)
-    (* | Applic'(expr,expr_list) *)
+    | Applic'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
     (* | ApplicTP'(expr,expr_list) *)
     | other -> ""
   and generate_param_set env_size consts fvars minor expr =
@@ -361,8 +361,9 @@ let make_consts_table tag_defs_collection sexpr_list =
     "mov qword ["^index_in_fvar_table^"], rax
     mov rax, SOB_VOID_ADDRESS \n ;<end fvar set> \n"
   and generate_seq env_size consts fvars expr_list =
-    (* ";GENERATE SEQUENCE:\n" ^ *)
+    ";GENERATE SEQUENCE:\n" ^
     (List.fold_right (fun a b -> (generate_wrap env_size consts fvars) a ^  b) expr_list "")
+    ^ "; <end sequence> \n"
   and generate_or env_size consts fvars expr_list =
     label_index.incr ();
     let curr_index = label_index.get () in
@@ -492,7 +493,35 @@ let make_consts_table tag_defs_collection sexpr_list =
     jmp end_lambda_body_"^(string_of_int curr_index)^"\n" ^
     body_label ^
     "end_lambda_body_"^(string_of_int curr_index)^": \n ;<end first simple lambda> \n"
-  ;;
+  and generate_applic env_size consts fvars expr expr_list = 
+
+    let push_magic = 
+    "mov rax, SOB_NIL_ADDRESS
+    push rax \n" in
+    let push_generated_expr_list =    
+     (List.fold_right (fun expr acc -> ((generate_wrap env_size consts fvars) expr) ^ "push rax \n" ^ acc) expr_list "") in
+    let push_args_num = "push " ^ string_of_int (List.length expr_list) ^ "\n" in
+    let generated_expr = generate_wrap env_size consts fvars expr in
+    (* let validate_closure = 
+    "xor r8, r8
+    mov r8b, word [rax]
+    cmp r8b, T_CLOSURE
+    jne end_applic_" ^ string_of_int curr_index ^ "\n" in *)
+    let push_env = 
+    "CLOSURE_ENV r9, rax
+    push r9 \n" in
+    let execute_code = 
+    "CLOSURE_CODE r10, rax
+    call r10\n" in
+    let clean_stack = 
+    "add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args\n ;<end applic> \n" in
+    ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr
+    ^ push_env ^ execute_code ^ clean_stack 
+
+      ;;
 
 
 

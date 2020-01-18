@@ -45,11 +45,6 @@ db %1
 %2
 %endmacro
 
-%define MAKE_LITERAL_INTEGER(val) MAKE_LITERAL T_INTEGER, dq val
-%define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
-%define MAKE_NIL db T_NIL
-%define MAKE_VOID db T_VOID
-%define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val
 const_tbl:
 " ^ (String.concat "\n" (List.map constant_bytes consts_tbl)) ^ "
 

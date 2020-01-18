@@ -215,8 +215,8 @@ let rec make_consts_tbl_single_sexpr first_pass tag_defs_collection sexpr acc_co
     | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
     | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
     | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING(\""^str^"\")"))]   
-    | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
-    | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
+    | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
+    | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
     | Sexpr(TaggedSexpr(str, sexpr1)) -> make_consts_tbl_single_sexpr first_pass tag_defs_collection (Sexpr(sexpr1)) acc_const_table index
     (* | Sexpr(TagRef(str)) -> [(sexpr, (index.get_and_inc (9), "consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table sexpr)))]    *)
         | other -> [];;
@@ -289,7 +289,6 @@ let make_consts_table tag_defs_collection sexpr_list =
                                 (exprs_to_sexpr_list asts))))) in
       let tag_defs_collection = collect_tag_defs [] sexpr_set in
       
-      Printf.printf "Sexpr set: "; print_list sexpr_set; Printf.printf "\n";
        (* tag_defs_collection;; *)
       make_consts_table tag_defs_collection sexpr_set;;
 
@@ -298,22 +297,22 @@ let make_consts_table tag_defs_collection sexpr_list =
   let generate_const consts const = 
     let const_address = (string_of_int (fst (List.assoc const consts))) in
     ";GENERATE CONST:\n" ^
-    " mov rax, " ^ const_address ^ "\n <end const> \n";;
+    " mov rax, const_tbl+" ^ const_address ^ "\n ;<end const> \n";;
 
   let generate_param_get minor = 
     ";GENERATE PARAM GET:\n" ^
-    "mov rax, qword [rbp + 8 ∗ (4 + "^ string_of_int minor ^")] \n <end param get> \n";;
+    "mov rax, qword [rbp + "^ (string_of_int (8 * (4 + minor))) ^"] \n ;<end param get> \n";;
 
   let generate_bound_get major minor = 
     ";GENERATE BOUND GET:\n" ^
     "mov rax, qword [rbp + 8 ∗ 2]
     mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"]
-    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n <end bound get> \n";;
+    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n ;<end bound get> \n";;
 
   let generate_fvar fvars v = 
     let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR:\n" ^
-    "mov rax, qword ["^label_in_fvar_table^"] \n <end fvar> \n";;
+    "mov rax, qword ["^label_in_fvar_table^"] \n ;<end fvar> \n";;
 
   let label_index =
     let n = ref 0 in
@@ -321,7 +320,7 @@ let make_consts_table tag_defs_collection sexpr_list =
       incr = (fun () -> n:= !n +1) } 
 
   let rec generate_wrap env_size consts fvars e = match e with
-    | Const'(const) -> generate_const env_size consts const
+    | Const'(const) -> generate_const consts const
     | Var'(VarParam(_, minor)) -> generate_param_get minor
     | Set'(Var'(VarParam(_, minor)),expr) -> generate_param_set env_size consts fvars minor expr
     | Var'(VarBound(_, major, minor)) -> generate_bound_get major minor
@@ -335,32 +334,32 @@ let make_consts_table tag_defs_collection sexpr_list =
     | BoxGet'(var) -> generate_box_get env_size consts fvars var
     | BoxSet'(var,expr) -> generate_box_set env_size consts fvars var expr
     | Box'(var) -> generate_box env_size consts fvars var
-    | LambdaSimple'(string_list,body) -> generate_simple_lambda env_size consts fvars string_list body
+    | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body
     (* | LambdaOpt'(string_list,string,expr) *)
     (* | Applic'(expr,expr_list) *)
     (* | ApplicTP'(expr,expr_list) *)
     | other -> ""
   and generate_param_set env_size consts fvars minor expr =
-    let generated_expr = generate_wrap env_size env_size consts fvars expr in
+    let generated_expr = generate_wrap env_size consts fvars expr in
     ";GENERATE PARAM SET:\n" ^
     generated_expr ^
     "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax
-    mov rax, SOB_VOID_ADDRESS \n <end param set> \n"
+    mov rax, SOB_VOID_ADDRESS \n ;<end param set> \n"
   and generate_bound_set env_size consts fvars major minor expr =
-    let generated_expr = generate_wrap env_size env_size consts fvars expr in
+    let generated_expr = generate_wrap env_size consts fvars expr in
     ";GENERATE BOUND SET:\n" ^
     generated_expr ^
     "mov rbx, qword [rbp + 8 ∗ 2]
     mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"]
     mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax
-    mov rax, SOB_VOID_ADDRESS \n <end bound set> \n"
+    mov rax, SOB_VOID_ADDRESS \n ;<end bound set> \n"
   and generate_fvar_set env_size consts fvars v expr =
     let generated_expr = generate_wrap env_size consts fvars expr in
     let index_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR SET:\n" ^
     generated_expr ^
     "mov qword ["^index_in_fvar_table^"], rax
-    mov rax, SOB_VOID_ADDRESS \n <end fvar set> \n"
+    mov rax, SOB_VOID_ADDRESS \n ;<end fvar set> \n"
   and generate_seq env_size consts fvars expr_list =
     (* ";GENERATE SEQUENCE:\n" ^ *)
     (List.fold_right (fun a b -> (generate_wrap env_size consts fvars) a ^  b) expr_list "")
@@ -373,7 +372,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     jne Lexit"^string_of_int curr_index^" \n\n" ^  b) in
     ";GENERATE OR:\n" ^
     List.fold_right or_fold_fun expr_list ""
-    ^"Lexit" ^(string_of_int curr_index) ^ ":\n <end or> \n"
+    ^"Lexit" ^(string_of_int curr_index) ^ ":\n ;<end or> \n"
   and generate_if env_size consts fvars test dit dif = 
     label_index.incr ();
     let curr_index = label_index.get () in
@@ -388,12 +387,12 @@ let make_consts_table tag_defs_collection sexpr_list =
     "jmp Lexit"^string_of_int curr_index^"\n" ^
     "Lelse"^string_of_int curr_index^":\n" ^
     generated_dif ^ "\n" ^
-    "Lexit"^string_of_int curr_index^":\n <end if> \n"
+    "Lexit"^string_of_int curr_index^":\n ;<end if> \n"
   and  generate_box_get env_size consts fvars var = 
     let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
     ";GENERATE BOX GET:\n" ^
     generated_var ^
-    "mov rax, qword [rax] \n <end box get> \n"
+    "mov rax, qword [rax] \n ;<end box get> \n"
   and  generate_box_set env_size consts fvars var expr = 
     let generated_expr = generate_wrap env_size consts fvars expr in
     let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
@@ -402,30 +401,102 @@ let make_consts_table tag_defs_collection sexpr_list =
     "push rax \n" ^
     generated_var ^
     "pop qword [rax]
-    mov rax, SOB_VOID_ADDRESS \n <end box set> \n"
+    mov rax, SOB_VOID_ADDRESS \n ;<end box set> \n"
   and generate_box env_size consts fvars var = 
   let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
   "malloc r8, 8 \n" ^
    generated_var ^
    "mov qword [r8], rax
-   mov rax, r8 \n <end box> \n"
+   mov rax, r8 \n ;<end box> \n"
   and generate_def env_size consts fvars var expr = 
   ";GENERATE DEFINE\n" ^
   (match var with
     |VarBound(_,major,minor) -> generate_bound_set env_size consts fvars major minor expr
     |VarParam(_, minor) -> generate_param_set env_size consts fvars minor expr
     |VarFree(v) -> generate_fvar_set env_size consts fvars v expr
-  ) ^ "\n <end define> \n"
+  ) ^ "\n ;<end define> \n"
   and generate_simple_lambda env_size consts fvars string_list body =
     label_index.incr ();
-    let curr_index = label_index.get () in
+    if env_size=0 then generate_first_simple_lambda env_size consts fvars string_list body else
+    let curr_index = label_index.get () in 
+    let generated_body = generate_wrap env_size consts fvars body in
+    let allocate_env_code =
+    "MALLOC rax, " ^ (string_of_int (8*env_size)) ^ "\n" in
+    let extend_env_code = 
+    "mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, " ^ (string_of_int env_size) ^ "
+    cmp rcx, 1
+    je end_extend_env_loop_" ^ (string_of_int curr_index) ^ "
     
+    extend_env_loop_" ^ (string_of_int curr_index) ^ ":
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_" ^ (string_of_int curr_index) ^ "
+    
+    end_extend_env_loop_" ^ (string_of_int curr_index) ^ ":\n"
+     in
+    let copy_params_to_env = 
+    "
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
 
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_"^(string_of_int curr_index) ^"
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_"^(string_of_int curr_index) ^":
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_"^(string_of_int curr_index) ^"
+
+    end_copy_param_loop_"^(string_of_int curr_index) ^": \n" in
+    let body_label = 
+    "lambda_body_"^(string_of_int curr_index) ^":
+    push rbp
+    mov rbp,rsp \n" ^
+    generated_body ^ "
+    leave
+    ret\n" in
+    let closure_code = 
+    "MAKE_CLOSURE(rax, r9,lambda_body_"^(string_of_int curr_index)^")
+    jmp end_lambda_body_"^(string_of_int curr_index)^"\n" ^
+    body_label ^
+    "end_lambda_body_"^(string_of_int curr_index)^":\n" in
+    allocate_env_code ^ extend_env_code ^ copy_params_to_env ^ closure_code ^ "\n ;<end simple lambda> \n"
+  and generate_first_simple_lambda env_size consts fvars string_list body = 
+    let curr_index = label_index.get () in
+    let generated_body = generate_wrap env_size consts fvars body in
+    let body_label = 
+    "lambda_body_"^(string_of_int curr_index) ^":
+    push rbp
+    mov rbp,rsp \n" ^
+    generated_body ^ "
+    leave
+    ret\n" in
+    ";GENERATE FIRST SIMPLE LAMBDA:\n" ^
+    "MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_"^(string_of_int curr_index)^")
+    jmp end_lambda_body_"^(string_of_int curr_index)^"\n" ^
+    body_label ^
+    "end_lambda_body_"^(string_of_int curr_index)^": \n ;<end first simple lambda> \n"
   ;;
 
 
 
-  let generate consts fvars e = generate_wrap 0 consts fvars e;;
+  let generate consts fvars e = generate_wrap (-1) consts fvars e;;
 
 end;;
 

@@ -25,7 +25,7 @@ let make_prologue consts_tbl fvars_tbl =
     (* Adapt the addressing here to your fvar addressing scheme:
        This imlementation assumes fvars are offset from the base label fvar_tbl *)
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
-    mov [fvar_tbl+" ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in
+    mov [fvar_tbl+ 8*" ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in
   let constant_bytes (c, (a, s)) = s in 
 "
 ;;; All the macros and the scheme-object printing procedure
@@ -38,6 +38,18 @@ malloc_pointer:
     resq 1
 
 section .data
+
+%macro MAKE_LITERAL 2 ; Make a literal of type %1
+; followed by the definition %2
+db %1
+%2
+%endmacro
+
+%define MAKE_LITERAL_INTEGER(val) MAKE_LITERAL T_INTEGER, dq val
+%define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
+%define MAKE_NIL db T_NIL
+%define MAKE_VOID db T_VOID
+%define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val
 const_tbl:
 " ^ (String.concat "\n" (List.map constant_bytes consts_tbl)) ^ "
 
@@ -60,7 +72,7 @@ main:
     push rbp
 
     ;; set up the heap
-    mov rdi, GB(4)
+    mov rdi, GB(1)
     call malloc
     mov [malloc_pointer], rax
 

@@ -1,1 +1,1 @@
-(define a 5)
+(lambda (a) a)

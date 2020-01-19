@@ -466,9 +466,11 @@ let make_consts_table tag_defs_collection sexpr_list =
 
     end_copy_param_loop_"^(string_of_int curr_index) ^": \n" in
     let body_label = 
-    "lambda_body_"^(string_of_int curr_index) ^":
-    push rbp
-    mov rbp,rsp \n" ^
+    "lambda_body_"^(string_of_int curr_index) ^":\n" ^
+        (* (if opt_flag then (generate_opt_lambda env_size consts fvars string_list body curr_index) else "") ^ *)
+    "push rbp
+    mov rbp,rsp \n" ^ 
+    (if opt_flag then (generate_opt_lambda env_size consts fvars string_list body curr_index) else "") ^
     generated_body ^ "
     leave
     ret\n" in
@@ -478,13 +480,15 @@ let make_consts_table tag_defs_collection sexpr_list =
     body_label ^
     "end_lambda_body_"^(string_of_int curr_index)^":\n" in
     allocate_env_code ^ extend_env_code ^ copy_params_to_env ^ closure_code ^ "\n ;<end simple lambda> \n"
-  and generate_first_simple_lambda env_size consts fvars string_list body = 
+  and generate_first_simple_lambda env_size consts fvars string_list body opt_flag= 
     let curr_index = label_index.get () in
     let generated_body = generate_wrap env_size consts fvars body in
     let body_label = 
-    "lambda_body_"^(string_of_int curr_index) ^":
-    push rbp
+    "lambda_body_"^(string_of_int curr_index) ^":\n" ^
+        (* (if opt_flag then (generate_opt_lambda env_size consts fvars string_list body curr_index) else "") ^ *)
+    "push rbp
     mov rbp,rsp \n" ^
+    (if opt_flag then (generate_opt_lambda env_size consts fvars string_list body curr_index) else "") ^
     generated_body ^ "
     leave
     ret\n" in
@@ -496,10 +500,11 @@ let make_consts_table tag_defs_collection sexpr_list =
   and generate_applic env_size consts fvars expr expr_list = 
 
     let push_magic = 
-    "mov rax, SOB_NIL_ADDRESS
+    "gdb:
+    mov rax, SOB_NIL_ADDRESS
     push rax \n" in
     let push_generated_expr_list =    
-     (List.fold_right (fun expr acc -> ((generate_wrap env_size consts fvars) expr) ^ "push rax \n" ^ acc) expr_list "") in
+     (List.fold_right (fun expr acc -> acc ^ ((generate_wrap env_size consts fvars) expr) ^ "push rax \n") expr_list "") in
     let push_args_num = "push " ^ string_of_int (List.length expr_list) ^ "\n" in
     let generated_expr = generate_wrap env_size consts fvars expr in
     (* let validate_closure = 
@@ -512,16 +517,22 @@ let make_consts_table tag_defs_collection sexpr_list =
     push r9 \n" in
     let execute_code = 
     "CLOSURE_CODE r10, rax
+
     call r10\n" in
     let clean_stack = 
     "add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count
+    add rbx, 1
+    pop rbx ; pop arg count + magic
     shl rbx , 3 ; rbx = rbx * 8
     add rsp , rbx; pop args\n ;<end applic> \n" in
     ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr
     ^ push_env ^ execute_code ^ clean_stack 
     and generate_opt_lambda env_size consts fvars string_list body label_index =
-      let save_n = "mov r8, qword [rbp+8*3] \n" in
+      let save_n = 
+      "mov r8, qword [rbp+8*6]
+      mov r8, qword [rbp+8*5] 
+      mov r8, qword [rbp+8*4] 
+      mov r8, qword [rbp+8*3] \n" in
       let save_expected_args = "mov r9, "^string_of_int (List.length string_list) ^"\n" in
       let opt_list_size = 
       "mov r10, r8
@@ -532,28 +543,22 @@ let make_consts_table tag_defs_collection sexpr_list =
       let first_unexpected = 
       "mov rax, r9 ; rax = expected
       add rax, 4 ; rax = expected+4
-      mov rcx, 8
-      mul rcx ; rax = (expected+4)*8
-      add rax, rbp
-      mov r11, qword [rax] ; r11 points to first unexpected arg\n" in
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, [rax] ; r11 points to first opt arg\n" in
       let allocate_opt_list =
           "MALLOC rax, r10 \n
           mov rcx, r10
           build_opt_list_" ^(string_of_int label_index)^":
           mov r12, qword [r11]
           mov [rax], r12
-          add r12, 8
+          add r11, 8
           add rax, 8
           loop build_opt_list_" ^(string_of_int label_index)^"
-          end_lambda_opt_"^ (string_of_int label_index) ^"\n"
-          (* need to have r11 point at list at rax*)
-          (* need to update lambda to include this if opt flag is set*)
-
-
-
-          
-          
-           in
+          mov r11, rax ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_"^ (string_of_int label_index) ^":\n" in
+        ";GENERATE LAMBDA OPT:\n" ^ save_n ^ save_expected_args ^ opt_list_size ^ first_unexpected ^ allocate_opt_list  ^ ";end lambda opt>\n"
+          ;;
 
 
 

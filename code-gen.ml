@@ -529,10 +529,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     ^ push_env ^ execute_code ^ clean_stack 
     and generate_opt_lambda env_size consts fvars string_list body label_index =
       let save_n = 
-      "mov r8, qword [rbp+8*6]
-      mov r8, qword [rbp+8*5] 
-      mov r8, qword [rbp+8*4] 
-      mov r8, qword [rbp+8*3] \n" in
+      "mov r8, qword [rbp+8*3] \n" in
       let save_expected_args = "mov r9, "^string_of_int (List.length string_list) ^"\n" in
       let opt_list_size = 
       "mov r10, r8
@@ -546,12 +543,14 @@ let make_consts_table tag_defs_collection sexpr_list =
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
       mov r11, [rax] ; r11 points to first opt arg\n" in
-      let allocate_opt_list =
-          "MALLOC rax, r10 \n
-          mov rcx, r10
+      let alloc_opt_list = 
+          "MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)\n" in
+      let build_opt_list =
+          "mov rcx, r10
           build_opt_list_" ^(string_of_int label_index)^":
           mov r12, qword [r11]
-          mov [rax], r12
+          mov qword [rax +1], r12 ; car = curr arg
+          MAKE_PAIR (rax, r12, [rax]) 
           add r11, 8
           add rax, 8
           loop build_opt_list_" ^(string_of_int label_index)^"

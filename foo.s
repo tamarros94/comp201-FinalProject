@@ -80,10 +80,7 @@ lambda_body_1:
 push rbp
     mov rbp,rsp 
 ;GENERATE LAMBDA OPT:
-mov r8, qword [rbp+8*6]
-      mov r8, qword [rbp+8*5] 
-      mov r8, qword [rbp+8*4] 
-      mov r8, qword [rbp+8*3] 
+mov r8, qword [rbp+8*3] 
 mov r9, 1
 mov r10, r8
       sub r10, r9 ; list size = n - expected args
@@ -94,8 +91,8 @@ mov rax, r9 ; rax = expected
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
       mov r11, [rax] ; r11 points to first opt arg
-MALLOC rax, r10 
-
+      mov r12, [rax + 8]
+MAKE_PAIR rax, r11, r12 ; r11 is car and r12 is cdr
           mov rcx, r10
           build_opt_list_1:
           mov r12, qword [r11]

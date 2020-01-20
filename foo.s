@@ -80,10 +80,10 @@ lambda_body_1:
 push rbp
     mov rbp,rsp 
 ;GENERATE LAMBDA OPT:
-mov r8, qword [rbp+8*3] 
-mov r9, 1
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
 mov r10, r8
-      sub r10, r9 ; list size = n - expected args
+      sub r10, r9 ; r10 = list size = n - expected
       cmp r10, 0
       je end_lambda_opt_1
 mov rax, r9 ; rax = expected
@@ -91,16 +91,18 @@ mov rax, r9 ; rax = expected
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
       mov r11, [rax] ; r11 points to first opt arg
-      mov r12, [rax + 8]
-MAKE_PAIR rax, r11, r12 ; r11 is car and r12 is cdr
-          mov rcx, r10
+      mov r14, r11 ; save another pointer the first opt argMAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list 
+mov rcx, r10
           build_opt_list_1:
-          mov r12, qword [r11]
-          mov [rax], r12
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
           add r11, 8
-          add rax, 8
           loop build_opt_list_1
-          mov r11, rax ; first opt arg has been replaced with a pointer to the opt_list
+          mov qword r14, r9 ; first opt arg has been replaced with a pointer to the opt_list
           end_lambda_opt_1:
 ;end lambda opt>
 ;GENERATE PARAM GET:

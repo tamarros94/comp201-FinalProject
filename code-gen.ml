@@ -529,11 +529,11 @@ let make_consts_table tag_defs_collection sexpr_list =
     ^ push_env ^ execute_code ^ clean_stack 
     and generate_opt_lambda env_size consts fvars string_list body label_index =
       let save_n = 
-      "mov r8, qword [rbp+8*3] \n" in
-      let save_expected_args = "mov r9, "^string_of_int (List.length string_list) ^"\n" in
+      "mov r8, qword [rbp+8*3] ; r8 = n \n" in
+      let save_expected_args = "mov r9, "^string_of_int (List.length string_list) ^" ; r9 = expected \n" in
       let opt_list_size = 
       "mov r10, r8
-      sub r10, r9 ; list size = n - expected args
+      sub r10, r9 ; r10 = list size = n - expected
       cmp r10, 0
       je end_lambda_opt_"^ (string_of_int label_index) ^"\n"
        in
@@ -542,21 +542,24 @@ let make_consts_table tag_defs_collection sexpr_list =
       add rax, 4 ; rax = expected+4
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
-      mov r11, [rax] ; r11 points to first opt arg\n" in
+      mov r11, [rax] ; r11 points to first opt arg
+      mov r14, r11 ; save another pointer the first opt arg" in
       let alloc_opt_list = 
-          "MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)\n" in
+          "MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list \n" in
       let build_opt_list =
           "mov rcx, r10
           build_opt_list_" ^(string_of_int label_index)^":
-          mov r12, qword [r11]
-          mov qword [rax +1], r12 ; car = curr arg
-          MAKE_PAIR (rax, r12, [rax]) 
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
           add r11, 8
-          add rax, 8
           loop build_opt_list_" ^(string_of_int label_index)^"
-          mov r11, rax ; first opt arg has been replaced with a pointer to the opt_list
+          mov qword r14, r9 ; first opt arg has been replaced with a pointer to the opt_list
           end_lambda_opt_"^ (string_of_int label_index) ^":\n" in
-        ";GENERATE LAMBDA OPT:\n" ^ save_n ^ save_expected_args ^ opt_list_size ^ first_unexpected ^ allocate_opt_list  ^ ";end lambda opt>\n"
+        ";GENERATE LAMBDA OPT:\n" ^ save_n ^ save_expected_args ^ opt_list_size ^ first_unexpected ^ alloc_opt_list ^ build_opt_list ^ ";end lambda opt>\n"
           ;;
 
 

@@ -91,7 +91,8 @@ mov rax, r9 ; rax = expected
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
       mov r11, [rax] ; r11 points to first opt arg
-      mov r14, r11 ; save another pointer the first opt argMAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+      mov r8, r11 ; save another pointer the first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
           mov r9, rax ; r9 points to opt list 
 mov rcx, r10
           build_opt_list_1:
@@ -102,7 +103,7 @@ mov rcx, r10
           add rax, 17
           add r11, 8
           loop build_opt_list_1
-          mov qword r14, r9 ; first opt arg has been replaced with a pointer to the opt_list
+          mov qword r8, r9 ; first opt arg has been replaced with a pointer to the opt_list
           end_lambda_opt_1:
 ;end lambda opt>
 ;GENERATE PARAM GET:

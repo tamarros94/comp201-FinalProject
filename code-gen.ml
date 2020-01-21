@@ -321,9 +321,9 @@ let make_consts_table tag_defs_collection sexpr_list =
     mov rax, qword [rax + "^ string_of_int (8*minor) ^"] \n ;<end bound get> \n";;
 
   let generate_fvar fvars v = 
-    let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
+    let index_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR:\n" ^
-    "mov rax, qword ["^label_in_fvar_table^"] \n ;<end fvar> \n";;
+    "mov rax, qword [fvar_tbl+"^string_of_int (8*int_of_string index_in_fvar_table)^"] \n ;<end fvar> \n";;
 
   let label_index =
     let n = ref 0 in
@@ -530,7 +530,8 @@ let make_consts_table tag_defs_collection sexpr_list =
 
     call r10\n" in
     let clean_stack = 
-    "add rsp , 8*1 ; pop env
+    "
+    add rsp , 8*1 ; pop env
     add rbx, 1
     pop rbx ; pop arg count + magic
     shl rbx , 3 ; rbx = rbx * 8

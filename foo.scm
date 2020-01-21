@@ -1,2 +1,1 @@
-(define list? 
-  (let ((null? null?)) 1))
+`(1 2 ,(+ 1 2))

@@ -22,6 +22,7 @@ MAKE_NIL
 MAKE_BOOL(0)
 MAKE_BOOL(1)
 MAKE_LITERAL_INTEGER(1)
+MAKE_LITERAL_INTEGER(2)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -31,7 +32,6 @@ MAKE_LITERAL_INTEGER(1)
 %define SOB_TRUE_ADDRESS const_tbl+4
 
 fvar_tbl:
-dq T_UNDEFINED
 dq T_UNDEFINED
 dq T_UNDEFINED
 dq T_UNDEFINED
@@ -152,46 +152,105 @@ user_code_fragment:
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
 
-;GENERATE DEFINE
-;GENERATE FVAR SET:
 ;GENERATE APPLIC
 mov rax, SOB_NIL_ADDRESS
     push rax 
-;GENERATE FVAR:
-mov rax, qword [4] 
- ;<end fvar> 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+1
+ ;<end const> 
 push rax 
-push 1
-;GENERATE FIRST SIMPLE LAMBDA:
-MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_1)
-    jmp end_lambda_body_1
-lambda_body_1:
-push rbp
-    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+15
+ ;<end const> 
+push rax 
 ;GENERATE CONST:
  mov rax, const_tbl+6
  ;<end const> 
-
-    leave
-    ret
-end_lambda_body_1: 
- ;<end first simple lambda> 
+push rax 
+push 2
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+136] 
+ ;<end fvar> 
 CLOSURE_ENV r9, rax
     push r9 
 CLOSURE_CODE r10, rax
 
     call r10
-add rsp , 8*1 ; pop env
+
+    add rsp , 8*1 ; pop env
     add rbx, 1
     pop rbx ; pop arg count + magic
     shl rbx , 3 ; rbx = rbx * 8
     add rsp , rbx; pop args
  ;<end applic> 
-mov qword [fvar_tbl+232], rax
-    mov rax, SOB_VOID_ADDRESS 
- ;<end fvar set> 
+push rax 
+push 2
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
 
- ;<end define> 
+    call r10
+
+    add rsp , 8*1 ; pop env
+    add rbx, 1
+    pop rbx ; pop arg count + magic
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+15
+ ;<end const> 
+push rax 
+push 2
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    add rbx, 1
+    pop rbx ; pop arg count + magic
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+6
+ ;<end const> 
+push rax 
+push 2
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    add rbx, 1
+    pop rbx ; pop arg count + magic
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
 
 	call write_sob_if_not_void
 

@@ -23,6 +23,7 @@ MAKE_BOOL(0)
 MAKE_BOOL(1)
 MAKE_LITERAL_INTEGER(1)
 MAKE_LITERAL_INTEGER(2)
+MAKE_LITERAL_INTEGER(3)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -65,6 +66,10 @@ gdb:
     mov rax, SOB_NIL_ADDRESS
     push rax 
 ;GENERATE CONST:
+ mov rax, const_tbl+24
+ ;<end const> 
+push rax 
+;GENERATE CONST:
  mov rax, const_tbl+15
  ;<end const> 
 push rax 
@@ -72,7 +77,7 @@ push rax
  mov rax, const_tbl+6
  ;<end const> 
 push rax 
-push 2
+push 3
 ;GENERATE FIRST SIMPLE LAMBDA:
 MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_1)
     jmp end_lambda_body_1
@@ -81,7 +86,7 @@ push rbp
     mov rbp,rsp 
 ;GENERATE LAMBDA OPT:
 mov r8, qword [rbp+8*3] ; r8 = n 
-mov r9, 1 ; r9 = expected 
+mov r9, 0 ; r9 = expected 
 mov r10, r8
       sub r10, r9 ; r10 = list size = n - expected
       cmp r10, 0
@@ -90,24 +95,26 @@ mov rax, r9 ; rax = expected
       add rax, 4 ; rax = expected+4
       shl rax, 3 ; rax = (expected+4)*8
       add rax, rbp ; rax = rbp + (expected+4)*8
-      mov r11, [rax] ; r11 points to first opt arg
-      mov r8, r11 ; save another pointer the first opt arg
+      mov r11, rax ; r11 points to first opt arg
 MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
-          mov r9, rax ; r9 points to opt list 
+          mov r9, rax ; r9 points to opt list
 mov rcx, r10
           build_opt_list_1:
           mov r12, qword [r11] ; r12 = curr arg
           mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_1
           MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
           mov qword [rax + 9], r13
           add rax, 17
           add r11, 8
           loop build_opt_list_1
-          mov qword r8, r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_build_opt_list_1:
+          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
           end_lambda_opt_1:
 ;end lambda opt>
 ;GENERATE PARAM GET:
-mov rax, qword [rbp + 40] 
+mov rax, qword [rbp + 32] 
  ;<end param get> 
 
     leave

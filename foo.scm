@@ -1,1 +1,1 @@
-((lambda (a . b) b) 1 2)
+((lambda s s) 1 2 3)

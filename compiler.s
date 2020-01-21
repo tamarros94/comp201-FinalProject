@@ -26,6 +26,8 @@
 %define MB(n) 1024*KB(n)
 %define GB(n) 1024*MB(n)
 
+%define PARAM_COUNT qword [rbp+3*WORD_SIZE]
+
 %define MAKE_NIL db T_NIL
 %define MAKE_VOID db T_VOID
 %define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val

@@ -337,7 +337,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body false
     | LambdaOpt'(string_list,string,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body true
     | Applic'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
-    (* | ApplicTP'(expr,expr_list) *)
+    | ApplicTP'(expr,expr_list) -> generate_tp_applic env_size consts fvars expr expr_list
     | other -> ""
   and generate_param_set env_size consts fvars minor expr =
     let generated_expr = generate_wrap env_size consts fvars expr in
@@ -500,8 +500,7 @@ let make_consts_table tag_defs_collection sexpr_list =
   and generate_applic env_size consts fvars expr expr_list = 
 
     let push_magic = 
-    "gdb:
-    mov rax, SOB_NIL_ADDRESS
+    "mov rax, SOB_NIL_ADDRESS
     push rax \n" in
     let push_generated_expr_list =    
      (List.fold_right (fun expr acc -> acc ^ ((generate_wrap env_size consts fvars) expr) ^ "push rax \n") expr_list "") in
@@ -563,6 +562,65 @@ let make_consts_table tag_defs_collection sexpr_list =
           mov PVAR("^string_of_int ((List.length string_list))^"), r9 ; first opt arg has been replaced with a pointer to the opt_list
           end_lambda_opt_"^ (string_of_int label_index) ^":\n" in
         ";GENERATE LAMBDA OPT:\n" ^ save_n ^ save_expected_args ^ opt_list_size ^ first_unexpected ^ alloc_opt_list ^ build_opt_list ^ ";end lambda opt>\n"
+    and generate_tp_applic env_size consts fvars expr expr_list = 
+          label_index.incr ();
+          let curr_index = label_index.get () in
+          let push_magic = 
+          "gdb:
+          mov rax, SOB_NIL_ADDRESS
+          push rax \n" in
+          let push_generated_expr_list =    
+          (List.fold_right (fun expr acc -> acc ^ ((generate_wrap env_size consts fvars) expr) ^ "push rax \n") expr_list "") in
+          let push_args_num = "push " ^ string_of_int (List.length expr_list) ^ "\n" in
+          let generated_expr = generate_wrap env_size consts fvars expr in
+          let push_env = 
+          "CLOSURE_ENV r9, rax
+          push r9 \n" in
+          let push_old_ret = 
+          "push qword [rbp + 8 * 1] ;push old ret address
+          push rax\n" in
+          let fix_stack = 
+          "mov r8, [rbp]
+           mov rcx, " ^ string_of_int ((List.length expr_list) + 5)^ " ; r10 = m (new) + 5
+           mov rax, PARAM_COUNT
+           mov r14, rax
+           add rax, 5 ; rax = n (old) +5
+           add r13, 1 ; running index
+           override_old_frame_"^ string_of_int curr_index^":
+            dec rax
+            mov r10, r13
+            shl r10, 3 ; r10 = 8*i
+            mov r11, rbp
+            sub r11, r10 ; r11 = rbp - 8*i
+            mov r12, qword [r11] ; r12 = [rbp - 8 * i]
+            mov r10, rax
+            shl r10, 3
+            add r10, rbp ; r10 = [rbp + 8 * rax]
+            mov qword [r10], r12
+            inc r13
+            loop override_old_frame_"^ string_of_int curr_index^"
+            mov rax, " ^ string_of_int (List.length expr_list)^ " ; rax = m
+            sub rax, r14 ; rax = m-n
+            shl rax, 3 ; rax = 8*(m-n)
+            mov r13, rbp
+            sub r13, rax ; r13 = rbp - 8*(m-n)
+            mov rsp, r13\n          "
+          in
+
+          let execute_code = 
+          "pop rax
+          CLOSURE_CODE r10, rax
+          mov rbp, r8
+          call r10\n" in
+          let clean_stack = 
+          "add rsp , 8*1 ; pop env
+          add rbx, 1
+          pop rbx ; pop arg count + magic
+          shl rbx , 3 ; rbx = rbx * 8
+          add rsp , rbx; pop args\n ;<end applic> \n" in
+          ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr
+          ^ push_env ^push_old_ret^ fix_stack^ execute_code ^ clean_stack 
+          
           ;;
 
 

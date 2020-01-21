@@ -21,9 +21,16 @@ MAKE_VOID
 MAKE_NIL
 MAKE_BOOL(0)
 MAKE_BOOL(1)
-MAKE_LITERAL_INTEGER(1)
-MAKE_LITERAL_INTEGER(2)
-MAKE_LITERAL_INTEGER(3)
+MAKE_LITERAL_STRING "a"
+MAKE_LITERAL_SYMBOL(const_tbl+6)
+MAKE_LITERAL_STRING "b"
+MAKE_LITERAL_SYMBOL(const_tbl+25)
+MAKE_LITERAL_STRING "c"
+MAKE_LITERAL_SYMBOL(const_tbl+44)
+MAKE_LITERAL_STRING "d"
+MAKE_LITERAL_SYMBOL(const_tbl+63)
+MAKE_LITERAL_STRING "e"
+MAKE_LITERAL_SYMBOL(const_tbl+82)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -41,7 +48,7 @@ main:
     push rbp
 
     ;; set up the heap
-    mov rdi, GB(1)
+    mov rdi, GB(4)
     call malloc
     mov [malloc_pointer], rax
 
@@ -62,60 +69,133 @@ main:
     ;; This is where we emulate the missing (define ...) expressions
     ;; for all the primitive procedures.
 ;GENERATE APPLIC
-gdb:
-    mov rax, SOB_NIL_ADDRESS
+mov rax, SOB_NIL_ADDRESS
     push rax 
-;GENERATE CONST:
- mov rax, const_tbl+24
- ;<end const> 
-push rax 
-;GENERATE CONST:
- mov rax, const_tbl+15
- ;<end const> 
-push rax 
-;GENERATE CONST:
- mov rax, const_tbl+6
- ;<end const> 
-push rax 
-push 3
+push 0
 ;GENERATE FIRST SIMPLE LAMBDA:
 MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_1)
     jmp end_lambda_body_1
 lambda_body_1:
 push rbp
     mov rbp,rsp 
-;GENERATE LAMBDA OPT:
-mov r8, qword [rbp+8*3] ; r8 = n 
-mov r9, 0 ; r9 = expected 
-mov r10, r8
-      sub r10, r9 ; r10 = list size = n - expected
-      cmp r10, 0
-      je end_lambda_opt_1
-mov rax, r9 ; rax = expected
-      add rax, 4 ; rax = expected+4
-      shl rax, 3 ; rax = (expected+4)*8
-      add rax, rbp ; rax = rbp + (expected+4)*8
-      mov r11, rax ; r11 points to first opt arg
-MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
-          mov r9, rax ; r9 points to opt list
-mov rcx, r10
-          build_opt_list_1:
-          mov r12, qword [r11] ; r12 = curr arg
-          mov qword [rax + 1], r12 ; place curr arg in curr car
-          cmp rcx, 1
-          je end_build_opt_list_1
-          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
-          mov qword [rax + 9], r13
-          add rax, 17
-          add r11, 8
-          loop build_opt_list_1
-          end_build_opt_list_1:
-          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
-          end_lambda_opt_1:
-;end lambda opt>
+;GENERATE APPLIC
+gdb:
+          mov rax, SOB_NIL_ADDRESS
+          push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+92
+ ;<end const> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+73
+ ;<end const> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+54
+ ;<end const> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+35
+ ;<end const> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+16
+ ;<end const> 
+push rax 
+push 5
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_3
+    
+    extend_env_loop_3:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_3
+    
+    end_extend_env_loop_3:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_3
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_3:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_3
+
+    end_copy_param_loop_3: 
+MAKE_CLOSURE(rax, r9,lambda_body_3)
+    jmp end_lambda_body_3
+lambda_body_3:
+push rbp
+    mov rbp,rsp 
 ;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
+mov rax, qword [rbp + 64] 
  ;<end param get> 
+
+    leave
+    ret
+end_lambda_body_3:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+          push r9 
+push qword [rbp + 8 * 1] ;push old ret address
+          push rax
+mov r8, rbp
+           mov rcx, 10 ; r10 = m (new) + 5
+           mov rax, PARAM_COUNT
+           mov r14, rax
+           add rax, 5 ; rax = n (old) +5
+           add r13, 1 ; running index
+           override_old_frame_2:
+            dec rax
+            mov r10, r13
+            shl r10, 3 ; r10 = 8*i
+            mov r11, rbp
+            sub r11, r10 ; r11 = rbp - 8*i
+            mov r12, qword [r11] ; r12 = [rbp - 8 * i]
+            mov r10, rax
+            shl r10, 3
+            add r10, rbp ; r10 = [rbp + 8 * rax]
+            mov qword [r10], r12
+            inc r13
+            loop override_old_frame_2
+            mov rax, 5 ; rax = m
+            sub rax, r14 ; rax = m-n
+            shl rax, 3 ; rax = 8*(m-n)
+            mov r13, rbp
+            sub r13, rax ; r13 = rbp - 8*(m-n)
+            mov rsp, r13
+          pop rax
+          CLOSURE_CODE r10, rax
+          mov rbp, r8
+          call r10
+add rsp , 8*1 ; pop env
+          add rbx, 1
+          pop rbx ; pop arg count + magic
+          shl rbx , 3 ; rbx = rbx * 8
+          add rsp , rbx; pop args
+ ;<end applic> 
 
     leave
     ret

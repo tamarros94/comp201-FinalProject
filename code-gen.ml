@@ -50,7 +50,7 @@ module Code_Gen
           | If'(test, dit, dif) -> (make_fvars_tbl_single_expr index test)@(make_fvars_tbl_single_expr index dit)@(make_fvars_tbl_single_expr index dif)
           | Seq'(expr_list) -> handle_expr_list expr_list
           | Set'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
-          | Def'(Var'(VarFree(str)), expr_val) -> index.incr (); [(str,index.get ())]@(make_fvars_tbl_single_expr index expr_val)
+          | Def'(Var'(VarFree(str)), expr_val) -> Printf.printf "fvar: %s\n" str; index.incr (); [(str,index.get ())]@(make_fvars_tbl_single_expr index expr_val)
           | Def'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
           | Or'(expr_list) -> handle_expr_list expr_list
           | Applic'(expr, expr_list) -> (make_fvars_tbl_single_expr index expr)@(handle_expr_list expr_list)
@@ -275,10 +275,13 @@ let make_consts_table tag_defs_collection sexpr_list =
               incr = (fun () -> n:= !n +1) } in
       let rec make_fvars_tbl_rec asts_rec =
         match asts_rec with
-        |car::cdr -> let fvars_list_rec = make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
+        |car::cdr -> 
+        let fvars_list_rec = 
+        make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
-        
-        make_fvars_tbl_rec asts;;
+        let fvar_tbl = make_fvars_tbl_rec asts in
+      fvar_tbl
+        ;;
 
   let make_consts_tbl asts =
 
@@ -337,7 +340,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body false
     | LambdaOpt'(string_list,string,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body true
     | Applic'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
-    | ApplicTP'(expr,expr_list) -> generate_tp_applic env_size consts fvars expr expr_list
+    | ApplicTP'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
     | other -> ""
   and generate_param_set env_size consts fvars minor expr =
     let generated_expr = generate_wrap env_size consts fvars expr in
@@ -610,16 +613,11 @@ let make_consts_table tag_defs_collection sexpr_list =
           let execute_code = 
           "pop rax
           CLOSURE_CODE r10, rax
+          sub rsp, 8
           mov rbp, r8
           call r10\n" in
-          let clean_stack = 
-          "add rsp , 8*1 ; pop env
-          add rbx, 1
-          pop rbx ; pop arg count + magic
-          shl rbx , 3 ; rbx = rbx * 8
-          add rsp , rbx; pop args\n ;<end applic> \n" in
           ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr
-          ^ push_env ^push_old_ret^ fix_stack^ execute_code ^ clean_stack 
+          ^ push_env ^push_old_ret^ fix_stack^ execute_code 
           
           ;;
 

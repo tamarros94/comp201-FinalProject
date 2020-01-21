@@ -25,7 +25,7 @@ let make_prologue consts_tbl fvars_tbl =
     (* Adapt the addressing here to your fvar addressing scheme:
        This imlementation assumes fvars are offset from the base label fvar_tbl *)
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
-    mov [fvar_tbl+ 8*" ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in
+    mov [fvar_tbl+ 8 * " ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in
   let constant_bytes (c, (a, s)) = s in 
 "
 ;;; All the macros and the scheme-object printing procedure
@@ -110,7 +110,7 @@ exception X_missing_input_file;;
 try
   let infile = Sys.argv.(1) in
   let code =  
-  (* (file_to_string "stdlib.scm") ^  *)
+  (file_to_string "stdlib.scm") ^ 
   (file_to_string infile) in
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in

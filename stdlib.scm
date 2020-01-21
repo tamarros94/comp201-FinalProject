@@ -12,19 +12,27 @@
       map-loop)))
 
 (define fold-left
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+(let ((null? null?)
+	(car car)
+	(cdr cdr))
+ (letrec ((fold-left-loop  (lambda (f acc list)
+  (if (null? list)
+      acc
+      (fold-left f
+             (f acc (car list))
+             (cdr list))))))
+      fold-left-loop)))
 
 (define fold-right
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
-
-(define cons*
-  #;(Add your implementation here
-     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
-     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
+(let ((null? null?)
+	(car car)
+	(cdr cdr))
+ (letrec ((fold-right-loop  (lambda (f acc list)
+  (if (null? list)
+      acc
+      (f (fold-right f acc (cdr list))
+         (car list))))))
+      fold-right-loop)))
 
 (define append
   (let ((null? null?)

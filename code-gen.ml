@@ -50,7 +50,7 @@ module Code_Gen
           | If'(test, dit, dif) -> (make_fvars_tbl_single_expr index test)@(make_fvars_tbl_single_expr index dit)@(make_fvars_tbl_single_expr index dif)
           | Seq'(expr_list) -> handle_expr_list expr_list
           | Set'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
-          | Def'(Var'(VarFree(str)), expr_val) -> Printf.printf "fvar: %s\n" str; index.incr (); [(str,index.get ())]@(make_fvars_tbl_single_expr index expr_val)
+          | Def'(Var'(VarFree(str)), expr_val) -> index.incr (); [(str,index.get ())]@(make_fvars_tbl_single_expr index expr_val)
           | Def'(expr_var, expr_val) -> (make_fvars_tbl_single_expr index expr_var)@(make_fvars_tbl_single_expr index expr_val)
           | Or'(expr_list) -> handle_expr_list expr_list
           | Applic'(expr, expr_list) -> (make_fvars_tbl_single_expr index expr)@(handle_expr_list expr_list)
@@ -213,7 +213,7 @@ let rec make_consts_tbl_single_sexpr first_pass tag_defs_collection sexpr acc_co
     match sexpr with
     | Sexpr(Number(Float f)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_FLOAT("^(string_of_float f)^")"))]
     | Sexpr(Number(Int n)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_INTEGER("^(string_of_int n)^")"))]    
-    | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^(Char.escaped char)^")"))]   
+    | Sexpr(Char(char)) -> [(sexpr, (index.get_and_inc (2), "MAKE_LITERAL_CHAR("^string_of_int (Char.code char)^")"))]   
     | Sexpr(String(str)) -> [(sexpr, (index.get_and_inc (get_string_size str), "MAKE_LITERAL_STRING \""^str^"\""))]   
     | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
     | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
@@ -270,7 +270,7 @@ let make_consts_table tag_defs_collection sexpr_list =
 
   let make_fvars_tbl asts =
     let index =
-            let n = ref (-1) in
+            let n = ref 28 in
             { get = (fun () -> !n);
               incr = (fun () -> n:= !n +1) } in
       let rec make_fvars_tbl_rec asts_rec =
@@ -280,7 +280,15 @@ let make_consts_table tag_defs_collection sexpr_list =
         make_fvars_tbl_single_expr index car in fvars_list_rec @ make_fvars_tbl_rec cdr
         |[] -> [] in
         let fvar_tbl = make_fvars_tbl_rec asts in
-      fvar_tbl
+        ["boolean?",0; 
+        "float?",1; "integer?",2; "pair?",3;
+        "null?",4; "char?",5; "string?",6;
+        "procedure?",7; "symbol?",8; "string-length",9;
+        "string-ref",10; "string-set!",11; "make-string",12;
+        "symbol->string",13; 
+        "char->integer",14; "integer->char",15; "eq?",16;
+        "+",17; "*",18; "-",19; "/",20; "<",21; "=",22
+        ; "car",23; "cdr",24; "cons",25; "set-car!",26; "set-cdr!",27; "apply",28]@fvar_tbl
         ;;
 
   let make_consts_tbl asts =
@@ -308,9 +316,9 @@ let make_consts_table tag_defs_collection sexpr_list =
 
   let generate_bound_get major minor = 
     ";GENERATE BOUND GET:\n" ^
-    "mov rax, qword [rbp + 8 ∗ 2]
-    mov rax, qword [rax + 8 ∗ "^ string_of_int major ^"]
-    mov rax, qword [rax + 8 ∗ "^ string_of_int minor ^"] \n ;<end bound get> \n";;
+    "mov rax, qword [rbp + " ^ string_of_int (8 * 2)^"]
+    mov rax, qword [rax + "^ string_of_int (8*major) ^"]
+    mov rax, qword [rax + "^ string_of_int (8*minor) ^"] \n ;<end bound get> \n";;
 
   let generate_fvar fvars v = 
     let label_in_fvar_table = (string_of_int (List.assoc v fvars)) in
@@ -346,22 +354,22 @@ let make_consts_table tag_defs_collection sexpr_list =
     let generated_expr = generate_wrap env_size consts fvars expr in
     ";GENERATE PARAM SET:\n" ^
     generated_expr ^
-    "mov qword [rbp + 8 ∗ (4 + " ^ string_of_int minor ^")], rax
+    "mov qword [rbp + " ^ string_of_int (8 * ( 4 + minor))^"], rax
     mov rax, SOB_VOID_ADDRESS \n ;<end param set> \n"
   and generate_bound_set env_size consts fvars major minor expr =
     let generated_expr = generate_wrap env_size consts fvars expr in
     ";GENERATE BOUND SET:\n" ^
     generated_expr ^
-    "mov rbx, qword [rbp + 8 ∗ 2]
-    mov rbx, qword [rbx + 8 ∗ " ^ string_of_int major ^"]
-    mov qword [rbx + 8 ∗ " ^ string_of_int minor ^"], rax
+    "mov rbx, qword [rbp + "^ string_of_int (8 * 2)^"]
+    mov rbx, qword [rbx + " ^ string_of_int (8 * major) ^"]
+    mov qword [rbx +  " ^ string_of_int (8 * minor) ^"], rax
     mov rax, SOB_VOID_ADDRESS \n ;<end bound set> \n"
   and generate_fvar_set env_size consts fvars v expr =
     let generated_expr = generate_wrap env_size consts fvars expr in
     let index_in_fvar_table = (string_of_int (List.assoc v fvars)) in
     ";GENERATE FVAR SET:\n" ^
     generated_expr ^
-    "mov qword ["^index_in_fvar_table^"], rax
+    "mov qword [fvar_tbl+"^string_of_int (8*int_of_string index_in_fvar_table)^"], rax
     mov rax, SOB_VOID_ADDRESS \n ;<end fvar set> \n"
   and generate_seq env_size consts fvars expr_list =
     ";GENERATE SEQUENCE:\n" ^
@@ -408,7 +416,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     mov rax, SOB_VOID_ADDRESS \n ;<end box set> \n"
   and generate_box env_size consts fvars var = 
   let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
-  "malloc r8, 8 \n" ^
+  "MALLOC r8, 8 \n" ^
    generated_var ^
    "mov qword [r8], rax
    mov rax, r8 \n ;<end box> \n"

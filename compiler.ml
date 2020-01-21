@@ -11,14 +11,16 @@ let string_to_asts s = List.map Semantics.run_semantics
                             (Reader.read_sexprs s));;
 
 let primitive_names_to_labels = 
-  ["boolean?", "is_boolean"; "float?", "is_float"; "integer?", "is_integer"; "pair?", "is_pair";
+  ["boolean?", "is_boolean"; 
+  "float?", "is_float"; "integer?", "is_integer"; "pair?", "is_pair";
    "null?", "is_null"; "char?", "is_char"; "string?", "is_string";
    "procedure?", "is_procedure"; "symbol?", "is_symbol"; "string-length", "string_length";
    "string-ref", "string_ref"; "string-set!", "string_set"; "make-string", "make_string";
    "symbol->string", "symbol_to_string"; 
    "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
    "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
-(* you can add yours here *)];;
+   ; "car", "car_label" ; "cdr", "cdr_label" ; "cons", "cons_label" ; "set-car!", "set_car_label" ; "set-cdr!", "set_cdr_label"
+  ; "apply", "apply_label"];;
 
 let make_prologue consts_tbl fvars_tbl =
   let make_primitive_closure (prim, label) =
@@ -88,14 +90,14 @@ main:
     ;; This is where we emulate the missing (define ...) expressions
     ;; for all the primitive procedures.
 " 
-(* ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
+^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
 
 user_code_fragment:
 ;;; The code you compiled will be catenated here.
 ;;; It will be executed immediately after the closures for 
 ;;; the primitive procedures are set up.
 
-" *)
+"
 ;;
 
 (* You may populate this variable with a string containing the epilogue.
@@ -110,7 +112,7 @@ exception X_missing_input_file;;
 try
   let infile = Sys.argv.(1) in
   let code =  
-  (file_to_string "stdlib.scm") ^ 
+  (* (file_to_string "stdlib.scm") ^  *)
   (file_to_string infile) in
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in

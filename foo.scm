@@ -1,1 +1,2 @@
-(define a 4)
+(define list? 
+  (let ((null? null?)) 1))

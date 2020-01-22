@@ -605,18 +605,18 @@ let make_consts_table tag_defs_collection sexpr_list =
            mov r14, rax
            add r13, 1 ; running index
            override_old_frame_"^ string_of_int curr_index^":
+            dec rax
             mov r9, rbp
             mov r10, r13
             shl r10, 3
             sub r9, r10 ; r9 = rbp - 8*i
             mov r11, [r9]
             mov [rbp+8*rax], r11
+            inc r13
+            loop override_old_frame_"^ string_of_int curr_index^"
             
             end_loop:
 
-            mov r10, [rbp]
-            mov r9, [rbp -8]
-            mov r8, [rbp -16]
             mov rcx, " ^ string_of_int ((List.length expr_list))^ " ; rcx = m (new)
             sub rcx, r12 ; rcx = m-n
             shl rcx, 3 ; rcx = 8(m-n)
@@ -628,6 +628,7 @@ let make_consts_table tag_defs_collection sexpr_list =
           let execute_code = 
           "mov rax, r15
           CLOSURE_CODE r10, rax
+          add rsp, 8
           mov rbp, r8
           jmp r10\n" in
               (* let clean_stack = 

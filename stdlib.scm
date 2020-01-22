@@ -30,8 +30,8 @@
  (letrec ((fold-right-loop  (lambda (f acc list)
   (if (null? list)
       acc
-      (f (fold-right f acc (cdr list))
-         (car list))))))
+      (f (car list)
+         (fold-right f acc (cdr list)))))))
       fold-right-loop)))
 
 (define append

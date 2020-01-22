@@ -12,12 +12,12 @@ let string_to_asts s = List.map Semantics.run_semantics
                             (Reader.read_sexprs s));;
 let code =  
   (file_to_string "foo.scm") in
-let asts = string_to_asts code in
-  let consts_tbl = Code_Gen.make_consts_tbl asts in
+string_to_asts code ;;
+  (* let consts_tbl = Code_Gen.make_consts_tbl asts in
   let fvars_tbl = Code_Gen.make_fvars_tbl asts in
   let generate = Code_Gen.generate consts_tbl fvars_tbl in
 String.concat "\n\n"
                         (List.map
                            (fun ast -> (generate ast) ^ "\n\tcall write_sob_if_not_void")
-                           asts);;
+                           asts);; *)
 

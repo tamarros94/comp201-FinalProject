@@ -416,6 +416,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     mov rax, SOB_VOID_ADDRESS \n ;<end box set> \n"
   and generate_box env_size consts fvars var = 
   let generated_var = generate_wrap env_size consts fvars (Var'(var)) in
+  ";GENERATE BOX:\n" ^
   "MALLOC r8, 8 \n" ^
    generated_var ^
    "mov qword [r8], rax
@@ -490,7 +491,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     jmp end_lambda_body_"^(string_of_int curr_index)^"\n" ^
     body_label ^
     "end_lambda_body_"^(string_of_int curr_index)^":\n" in
-    allocate_env_code ^ extend_env_code ^ copy_params_to_env ^ closure_code ^ "\n ;<end simple lambda> \n"
+    ";GENERATE SIMPLE LAMBDA:\n" ^allocate_env_code ^ extend_env_code ^ copy_params_to_env ^ closure_code ^ "\n ;<end simple lambda> \n"
   and generate_first_simple_lambda env_size consts fvars string_list body opt_flag= 
     let curr_index = label_index.get () in
     let generated_body = generate_wrap env_size consts fvars body in
@@ -532,8 +533,8 @@ let make_consts_table tag_defs_collection sexpr_list =
     let clean_stack = 
     "
     add rsp , 8*1 ; pop env
-    add rbx, 1
     pop rbx ; pop arg count + magic
+    add rbx, 1
     shl rbx , 3 ; rbx = rbx * 8
     add rsp , rbx; pop args\n ;<end applic> \n" in
     ";GENERATE APPLIC\n" ^ push_magic ^ push_generated_expr_list ^ push_args_num ^ generated_expr

@@ -1,1 +1,1 @@
-(letrec ((fact (lambda (n) (if ( = n 0 ) 1 (* n (fact (- n 1)))))) )(fact 5))
+((lambda (a b) (+ 1 a b )) 2 3)

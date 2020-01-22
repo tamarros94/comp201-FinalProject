@@ -21,11 +21,9 @@ MAKE_VOID
 MAKE_NIL
 MAKE_BOOL(0)
 MAKE_BOOL(1)
-MAKE_LITERAL_INTEGER(0)
 MAKE_LITERAL_INTEGER(1)
-MAKE_LITERAL_INTEGER(5)
-MAKE_LITERAL_STRING "whatever"
-MAKE_LITERAL_SYMBOL(const_tbl+33)
+MAKE_LITERAL_INTEGER(2)
+MAKE_LITERAL_INTEGER(3)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -159,233 +157,73 @@ user_code_fragment:
 mov rax, SOB_NIL_ADDRESS
     push rax 
 ;GENERATE CONST:
- mov rax, const_tbl+50
+ mov rax, const_tbl+24
  ;<end const> 
 push rax 
-push 1
+;GENERATE CONST:
+ mov rax, const_tbl+15
+ ;<end const> 
+push rax 
+push 2
 ;GENERATE FIRST SIMPLE LAMBDA:
 MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_1)
     jmp end_lambda_body_1
 lambda_body_1:
 push rbp
     mov rbp,rsp 
-;GENERATE SEQUENCE:
-;GENERATE PARAM SET:
-;GENERATE BOX:
-MALLOC r8, 8 
+;GENERATE APPLIC TP:
+mov rax, SOB_NIL_ADDRESS
+          push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
 ;GENERATE PARAM GET:
 mov rax, qword [rbp + 32] 
  ;<end param get> 
-mov qword [r8], rax
-   mov rax, r8 
- ;<end box> 
-mov qword [rbp + 32], rax
-    mov rax, SOB_VOID_ADDRESS 
- ;<end param set> 
-;GENERATE SEQUENCE:
-;GENERATE BOX SET:
-;GENERATE SIMPLE LAMBDA:
-MALLOC rax, 8
-mov r9, rax ;r9 points at env[0]
-    mov r8, qword [rbp+16] ;r8 points at the source env
-    add rax, 8 ; rax points at env[1]
-    mov rcx, 1
-    cmp rcx, 1
-    je end_extend_env_loop_2
-    
-    extend_env_loop_2:
-    mov r10, qword [r8]
-    mov qword [rax], r10
-    add r8, 8
-    add rax, 8
-    loop extend_env_loop_2
-    
-    end_extend_env_loop_2:
-
-    push r9
-    mov rcx, qword [rbp+8*3] 
-    inc rcx ;include magic params
-    shl rcx, 3 ;rcx = size of params list (including magic)
-    MALLOC rax, rcx ;allocate room for param list
-    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
-    pop r9
-    mov qword [r9], rax ;place pointer to param list in env[0]
-
-    shr rcx, 3 ;rcx holds num of params
-    cmp rcx, 0              
-    je end_copy_param_loop_2
-    mov r10, rbp
-    add r10, 8*4 ;r10 points to beginning of param list on stack
-
-    copy_param_loop_2:
-    mov r11, qword [r10]
-    mov qword [rax], r11
-    add r10, 8
-    add rax, 8
-    loop copy_param_loop_2
-
-    end_copy_param_loop_2: 
-MAKE_CLOSURE(rax, r9,lambda_body_2)
-    jmp end_lambda_body_2
-lambda_body_2:
-push rbp
-    mov rbp,rsp 
-;GENERATE IF:
-;GENERATE APPLIC
-mov rax, SOB_NIL_ADDRESS
-    push rax 
+push rax 
 ;GENERATE CONST:
  mov rax, const_tbl+6
  ;<end const> 
 push rax 
-;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
- ;<end param get> 
-push rax 
-push 2
+push 3
 ;GENERATE FVAR:
-mov rax, qword [fvar_tbl+176] 
+mov rax, qword [fvar_tbl+136] 
  ;<end fvar> 
 CLOSURE_ENV r9, rax
-    push r9 
-CLOSURE_CODE r10, rax
+          push r9 
+push qword [rbp + 8 * 1] ;push old ret address
+          mov r15, rax
+mov r8, qword [rbp]
+           mov rax, PARAM_COUNT
+           mov r12, PARAM_COUNT
+           add rax, 5 ; rax = n (old) +5
+           mov rcx, 8 ; rcx = m (new) + 5
+           mov r14, rax
+           add r13, 1 ; running index
+           override_old_frame_2:
+            mov r9, rbp
+            mov r10, r13
+            shl r10, 3
+            sub r9, r10 ; r9 = rbp - 8*i
+            mov r11, [r9]
+            mov [rbp+8*rax], r11
+            dec rax
+            end_loop:
 
-    call r10
-
-    add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count + magic
-    add rbx, 1
-    shl rbx , 3 ; rbx = rbx * 8
-    add rsp , rbx; pop args
- ;<end applic> 
-cmp rax, SOB_FALSE_ADDRESS
-    je Lelse3
-;GENERATE CONST:
- mov rax, const_tbl+15
- ;<end const> 
-
-jmp Lexit3
-Lelse3:
-;GENERATE APPLIC
-mov rax, SOB_NIL_ADDRESS
-    push rax 
-;GENERATE APPLIC
-mov rax, SOB_NIL_ADDRESS
-    push rax 
-;GENERATE APPLIC
-mov rax, SOB_NIL_ADDRESS
-    push rax 
-;GENERATE CONST:
- mov rax, const_tbl+15
- ;<end const> 
-push rax 
-;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
- ;<end param get> 
-push rax 
-push 2
-;GENERATE FVAR:
-mov rax, qword [fvar_tbl+152] 
- ;<end fvar> 
-CLOSURE_ENV r9, rax
-    push r9 
-CLOSURE_CODE r10, rax
-
-    call r10
-
-    add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count + magic
-    add rbx, 1
-    shl rbx , 3 ; rbx = rbx * 8
-    add rsp , rbx; pop args
- ;<end applic> 
-push rax 
-push 1
-;GENERATE BOX GET:
-;GENERATE BOUND GET:
-mov rax, qword [rbp + 16]
-    mov rax, qword [rax + 0]
-    mov rax, qword [rax + 0] 
- ;<end bound get> 
-mov rax, qword [rax] 
- ;<end box get> 
-CLOSURE_ENV r9, rax
-    push r9 
-CLOSURE_CODE r10, rax
-
-    call r10
-
-    add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count + magic
-    add rbx, 1
-    shl rbx , 3 ; rbx = rbx * 8
-    add rsp , rbx; pop args
- ;<end applic> 
-push rax 
-;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
- ;<end param get> 
-push rax 
-push 2
-;GENERATE FVAR:
-mov rax, qword [fvar_tbl+144] 
- ;<end fvar> 
-CLOSURE_ENV r9, rax
-    push r9 
-CLOSURE_CODE r10, rax
-
-    call r10
-
-    add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count + magic
-    add rbx, 1
-    shl rbx , 3 ; rbx = rbx * 8
-    add rsp , rbx; pop args
- ;<end applic> 
-
-Lexit3:
- ;<end if> 
-
-    leave
-    ret
-end_lambda_body_2:
-
- ;<end simple lambda> 
-push rax 
-;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
- ;<end param get> 
-pop qword [rax]
-    mov rax, SOB_VOID_ADDRESS 
- ;<end box set> 
-;GENERATE APPLIC
-mov rax, SOB_NIL_ADDRESS
-    push rax 
-;GENERATE CONST:
- mov rax, const_tbl+24
- ;<end const> 
-push rax 
-push 1
-;GENERATE BOX GET:
-;GENERATE PARAM GET:
-mov rax, qword [rbp + 32] 
- ;<end param get> 
-mov rax, qword [rax] 
- ;<end box get> 
-CLOSURE_ENV r9, rax
-    push r9 
-CLOSURE_CODE r10, rax
-
-    call r10
-
-    add rsp , 8*1 ; pop env
-    pop rbx ; pop arg count + magic
-    add rbx, 1
-    shl rbx , 3 ; rbx = rbx * 8
-    add rsp , rbx; pop args
- ;<end applic> 
-; <end sequence> 
-; <end sequence> 
+            mov r10, [rbp]
+            mov r9, [rbp -8]
+            mov r8, [rbp -16]
+            mov rcx, 3 ; rcx = m (new)
+            sub rcx, r12 ; rcx = m-n
+            shl rcx, 3 ; rcx = 8(m-n)
+            mov r12, rbp
+            sub r12, rcx ; rax = rbp - 8(m-n)
+            mov rsp, r12
+mov rax, r15
+          CLOSURE_CODE r10, rax
+          mov rbp, r8
+          jmp r10
 
     leave
     ret

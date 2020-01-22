@@ -75,12 +75,28 @@ let rec const_eq s1 s2 =
   | Void, Void -> true
   | _ -> false;;
 
+let rec print_sexpr sexpr = match sexpr with
+    | Sexpr(Nil) -> Printf.printf "Sexpr(Nil)"
+    | Sexpr(Bool(false)) -> Printf.printf "Sexpr(Bool(false))"
+    | Sexpr(Bool(true)) -> Printf.printf "Sexpr(Bool(true))"
+    | Sexpr(Number(Float f)) -> Printf.printf "Sexpr(Number(Float %f))" f
+    | Sexpr(Number(Int n)) -> Printf.printf "Sexpr(Number(Int %d))" n
+    | Sexpr(Char(char)) ->   Printf.printf "Sexpr(Char(%c))" char
+    | Sexpr(String(str)) -> Printf.printf "Sexpr(String(%s))" str
+    | Sexpr(Symbol(str)) -> Printf.printf "Sexpr(Symbol(%s))" str
+    | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(";print_sexpr (Sexpr(sexpr1)); Printf.printf ", " ; print_sexpr (Sexpr(sexpr2)); Printf.printf "))" 
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr(%s, " str; print_sexpr (Sexpr(sexpr1));Printf.printf ")";
+    | Sexpr(TagRef(str)) -> Printf.printf "TagRef(%s)" str 
+    | other -> Printf.printf "other" 
+          ;;
+
 (* Create Consts Table *)
 (*① Scan the AST (one recursive pass) & collect the sexprs in all Const records*)
 let rec expr_to_sexpr_list expr = 
     let rec handle_expr_list expr_list = match expr_list with
         |[] -> []
-        |car :: cdr -> let list_rec = expr_to_sexpr_list car in list_rec @ handle_expr_list cdr in
+        |car :: cdr -> let list_rec = expr_to_sexpr_list car in 
+         list_rec @ handle_expr_list cdr in
 
     match expr with
     | Const'(sexpr) -> [sexpr]
@@ -93,6 +109,7 @@ let rec expr_to_sexpr_list expr =
     | ApplicTP'(expr, expr_list) -> (expr_to_sexpr_list expr)@(handle_expr_list expr_list)
     | LambdaSimple'(arg_list, body) -> expr_to_sexpr_list body
     | LambdaOpt'(arg_list, opt_arg, body) -> expr_to_sexpr_list body
+    | BoxSet'(var,expr) -> expr_to_sexpr_list expr
     | other -> [];;
 
 let rec exprs_to_sexpr_list expr_list = match expr_list with
@@ -111,21 +128,6 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
 | [] -> []
 |car :: cdr -> let list_rec = remove_sexpr_duplicates car cdr in [car]@(convert_sexpr_list_to_set list_rec)
 ;;
-
-let rec print_sexpr sexpr = match sexpr with
-    | Sexpr(Nil) -> Printf.printf "Sexpr(Nil)"
-    | Sexpr(Bool(false)) -> Printf.printf "Sexpr(Bool(false))"
-    | Sexpr(Bool(true)) -> Printf.printf "Sexpr(Bool(true))"
-    | Sexpr(Number(Float f)) -> Printf.printf "Sexpr(Number(Float %f))" f
-    | Sexpr(Number(Int n)) -> Printf.printf "Sexpr(Number(Int %d))" n
-    | Sexpr(Char(char)) ->   Printf.printf "Sexpr(Char(%c))" char
-    | Sexpr(String(str)) -> Printf.printf "Sexpr(String(%s))" str
-    | Sexpr(Symbol(str)) -> Printf.printf "Sexpr(Symbol(%s))" str
-    | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(";print_sexpr (Sexpr(sexpr1)); Printf.printf ", " ; print_sexpr (Sexpr(sexpr2)); Printf.printf "))" 
-    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr(%s, " str; print_sexpr (Sexpr(sexpr1));Printf.printf ")";
-    | Sexpr(TagRef(str)) -> Printf.printf "TagRef(%s)" str 
-    | other -> Printf.printf "other" 
-          ;;
 
 let rec rename_tagged_sexpr index sexpr = 
 match sexpr with
@@ -298,6 +300,7 @@ let make_consts_table tag_defs_collection sexpr_list =
                          (rename_tagged_sexprs
                             (convert_sexpr_list_to_set 
                                 (exprs_to_sexpr_list asts))))) in
+      (* Printf.printf "Sexpr set: "; print_list sexpr_set; Printf.printf "\n"; *)
       let tag_defs_collection = collect_tag_defs [] sexpr_set in
       
        (* tag_defs_collection;; *)
@@ -306,7 +309,9 @@ let make_consts_table tag_defs_collection sexpr_list =
 
 
   let generate_const consts const = 
+      (* Printf.printf "const:" ; print_sexpr const; Printf.printf "\n"; *)
     let const_address = (string_of_int (fst (List.assoc const consts))) in
+          (* Printf.printf "const success: \n" ; *)
     ";GENERATE CONST:\n" ^
     " mov rax, const_tbl+" ^ const_address ^ "\n ;<end const> \n";;
 

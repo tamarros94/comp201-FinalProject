@@ -879,7 +879,127 @@ apply_label:
 push rbp
 mov rbp, rsp
 
+mov qword [rbp - 8], SOB_NIL_ADDRESS
+mov r8, PARAM_COUNT ;r8=n
+add r8, 3
+shl r8, 3
+add r8, rbp
+mov r9, qword [r8] ;r9->list
+mov r10, r9 ;r10->list
+mov r11, 0 ;r11=list length
 
+.len:
+cmp r9, SOB_NIL_ADDRESS
+je .skip_list
+CDR r9, r9
+inc r11
+jmp .len
+
+mov r9, r10
+
+.skip_list:
+mov rcx, r11 
+mov r8, r11 ;r8=len
+mov r10, 1 ;i=1
+
+.extract_list:
+mov rax, qword [r9+TYPE_SIZE] ;rax=car
+mov r13, r8 ;r13=len
+add r13, r10 ;r13=len+i
+shl r13, 3 ;r8=8*(len+i)
+mov r12, rbp
+sub r12, r13 ;r12=rbp-8*(len+i)
+mov qword [r12], rax
+add r9, 8
+dec r10
+loop .extract_list
+
+mov rcx, PARAM_COUNT 
+sub rcx, 2 ;rcx=n-2
+mov r8, 2 ;i=2
+
+.copy_params:
+mov r9, rcx ;r9=n-2
+add r9, 4 ;r9=(n-2)+4=n+2
+shl r9, 3 ;r9=8*(n+2)
+mov rax, rbp
+add rax, r9 ;rax=rbp + 8*(n+2)
+mov r12, qword [rax] ;r12=[rbp + 8*(n+2)]
+mov r10, r11
+add r10, r8
+shl r10, 3 ;r10= 8*(r11+r8)
+mov r14, rbp
+sub r14, r10
+mov qword [r14], r12 ; [rbp + 8*(n+2)] -> [rbp - (8 * (len + i))]
+inc r8 ;i++
+loop .copy_params
+
+mov rax, r11 ;rax=len
+add rax, PARAM_COUNT ;rax=len+n
+sub rax, 2 ;rax = (len+n)-2 = new params len
+mov r10, rax
+add r10, 2
+shl r10, 3
+mov r14, rbp
+sub r14, r10
+mov qword [r14], rax
+
+mov r8, qword [rbp + 8 * 4] ;r8=proc closure
+CLOSURE_ENV r10, r8 ;r10=proc env
+mov r13, rax
+add r13, 3
+shl r13, 3
+mov r14, rbp
+sub r14, r13
+mov qword [r14], r10 ;push env
+mov r9, qword [rbp + 8] ;r9=ret
+mov r13, rax
+add r13, 4
+shl r13, 3
+mov r14, rbp
+sub r14, r13
+mov qword [r14], r9 ;push ret
+
+;ApplicTP code
+mov r15, r8
+mov r8, qword [rbp]
+mov rax, PARAM_COUNT
+mov r12, PARAM_COUNT
+mov rdi, r11
+add rax, 5 ; rax = n (old) +5
+mov r14, r12
+add r14, rdi
+sub r14, 2
+mov rcx, r14 ;rcx=m
+add rcx, 5 ;rcx=m+5
+mov r14, rax
+mov r13, 1 ; running index
+.override_old_frame:
+    dec rax
+    mov r9, rbp
+    mov r10, r13
+    shl r10, 3
+    sub r9, r10 ; r9 = rbp - 8*i
+    mov r11, qword [r9]
+    mov qword [rbp+8*rax], r11
+    inc r13
+    loop .override_old_frame
+
+mov r14, r12
+add r14, rdi
+sub r14, 2
+mov rcx, r14 ;rcx=m
+sub rcx, r12 ; rcx = m-n
+shl rcx, 3 ; rcx = 8(m-n)
+mov r14, rbp
+sub r14, rcx ; rax = rbp - 8(m-n)
+mov rsp, r14
+
+mov rax, r15
+CLOSURE_CODE r10, rax
+add rsp, 8
+mov rbp, r8
+jmp r10
 
 leave
 ret

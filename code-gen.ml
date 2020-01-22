@@ -615,8 +615,6 @@ let make_consts_table tag_defs_collection sexpr_list =
             inc r13
             loop override_old_frame_"^ string_of_int curr_index^"
             
-            end_loop:
-
             mov rcx, " ^ string_of_int ((List.length expr_list))^ " ; rcx = m (new)
             sub rcx, r12 ; rcx = m-n
             shl rcx, 3 ; rcx = 8(m-n)

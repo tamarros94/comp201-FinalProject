@@ -1,1 +1,3 @@
-((lambda (a b) (+ 1 a b )) 2 3)
+(define list (lambda x x))
+
+(apply list '1 '2 '(3 4))

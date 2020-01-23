@@ -23,10 +23,6 @@ MAKE_BOOL(0)
 MAKE_BOOL(1)
 MAKE_LITERAL_INTEGER(1)
 MAKE_LITERAL_INTEGER(2)
-MAKE_LITERAL_INTEGER(3)
-MAKE_LITERAL_INTEGER(4)
-MAKE_LITERAL_PAIR(const_tbl+33, const_tbl+1)
-MAKE_LITERAL_PAIR(const_tbl+24, const_tbl+42)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -214,7 +210,7 @@ mov qword [fvar_tbl+232], rax
 mov rax, SOB_NIL_ADDRESS
     push rax 
 ;GENERATE CONST:
- mov rax, const_tbl+59
+ mov rax, const_tbl+1
  ;<end const> 
 push rax 
 ;GENERATE CONST:
@@ -1142,22 +1138,23 @@ add r8, rbp
 mov r9, qword [r8] ;r9->list
 mov r10, r9 ;r10->list
 mov r11, 0 ;r11=list length
+cmp r9, SOB_NIL_ADDRESS
+je .skip_list
 
 .len:
 cmp r9, SOB_NIL_ADDRESS
-je .skip_list
+je .prepare_extract
 CDR r9, r9
 inc r11
 jmp .len
 
 
-.skip_list:
+.prepare_extract:
 mov r9, r10
 mov rcx, r11 
 mov r8, r11 ;r8=len
 mov r10, 1 ;i=1
 
-gdb:
 .extract_list:
 mov rax, qword [r9+TYPE_SIZE] ;rax=car
 mov r13, r8 ;r13=len
@@ -1170,6 +1167,7 @@ mov r9, qword [r9+TYPE_SIZE+8]
 dec r10
 loop .extract_list
 
+.skip_list:
 mov rcx, PARAM_COUNT 
 sub rcx, 2 ;rcx=n-2
 mov r8, 2 ;i=2

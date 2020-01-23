@@ -887,22 +887,23 @@ add r8, rbp
 mov r9, qword [r8] ;r9->list
 mov r10, r9 ;r10->list
 mov r11, 0 ;r11=list length
+cmp r9, SOB_NIL_ADDRESS
+je .skip_list
 
 .len:
 cmp r9, SOB_NIL_ADDRESS
-je .skip_list
+je .prepare_extract
 CDR r9, r9
 inc r11
 jmp .len
 
 
-.skip_list:
+.prepare_extract:
 mov r9, r10
 mov rcx, r11 
 mov r8, r11 ;r8=len
 mov r10, 1 ;i=1
 
-gdb:
 .extract_list:
 mov rax, qword [r9+TYPE_SIZE] ;rax=car
 mov r13, r8 ;r13=len
@@ -915,6 +916,7 @@ mov r9, qword [r9+TYPE_SIZE+8]
 dec r10
 loop .extract_list
 
+.skip_list:
 mov rcx, PARAM_COUNT 
 sub rcx, 2 ;rcx=n-2
 mov r8, 2 ;i=2

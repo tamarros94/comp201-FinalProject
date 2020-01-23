@@ -169,11 +169,13 @@ let rec parse_exp sexpr = match sexpr with
   | Pair(Symbol("quasiquote"), Pair(e, Nil)) -> parse_exp (expand_quasiquote e)
   | TagRef(e) -> Const(Sexpr(TagRef(e)))
   | TaggedSexpr(e,Pair(Symbol "quote", Pair(x, Nil))) -> Const(Sexpr(TaggedSexpr(e, x)))
+  | TaggedSexpr(e,Pair(a,b)) -> Const(Sexpr(TaggedSexpr(e, Pair(a,b))))
   | TaggedSexpr(e,Bool(x)) -> Const(Sexpr(TaggedSexpr(e, Bool(x))))
   | TaggedSexpr(e,Char(x)) -> Const(Sexpr(TaggedSexpr(e, Char(x))))
   | TaggedSexpr(e,Number(x)) -> Const(Sexpr(TaggedSexpr(e, Number(x))))
   | TaggedSexpr(e,String(x)) -> Const(Sexpr(TaggedSexpr(e, String(x))))
   | TaggedSexpr(e,TagRef(x)) -> Const(Sexpr(TaggedSexpr(e, TagRef(x))))
+  (* | TaggedSexpr(e,whatever) -> Const(Sexpr(TaggedSexpr(e, Const(whatever)))) *)
 (*variables*)
   | Symbol(e) -> tag_parse_var e
 (*conditionals*)        
@@ -199,7 +201,7 @@ let rec parse_exp sexpr = match sexpr with
   | Pair(Symbol "begin", seq) -> tag_parse_seq_explicit seq
   (*applic*)
   | Pair(proc_sexpr, sexprs) ->  tag_parse_applic proc_sexpr sexprs
-  | _ -> raise X_syntax_error
+  | other -> raise X_syntax_error
 
   and tag_parse_if test dit dif = match dif with
   | Nil -> If(parse_exp test, parse_exp dit, Const(Void))

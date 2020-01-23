@@ -85,8 +85,8 @@ let rec print_sexpr sexpr = match sexpr with
     | Sexpr(String(str)) -> Printf.printf "Sexpr(String(%s))" str
     | Sexpr(Symbol(str)) -> Printf.printf "Sexpr(Symbol(%s))" str
     | Sexpr(Pair(sexpr1, sexpr2)) -> Printf.printf "Sexpr(Pair(";print_sexpr (Sexpr(sexpr1)); Printf.printf ", " ; print_sexpr (Sexpr(sexpr2)); Printf.printf "))" 
-    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "TaggedSexpr(%s, " str; print_sexpr (Sexpr(sexpr1));Printf.printf ")";
-    | Sexpr(TagRef(str)) -> Printf.printf "TagRef(%s)" str 
+    | Sexpr(TaggedSexpr(str, sexpr1)) -> Printf.printf "Sexpr(TaggedSexpr(%s, " str; print_sexpr (Sexpr(sexpr1));Printf.printf "))";
+    | Sexpr(TagRef(str)) -> Printf.printf "Sexpr(TagRef(%s))" str 
     | other -> Printf.printf "other" 
           ;;
 
@@ -128,6 +128,32 @@ let rec convert_sexpr_list_to_set sexpr_list = match sexpr_list with
 | [] -> []
 |car :: cdr -> let list_rec = remove_sexpr_duplicates car cdr in [car]@(convert_sexpr_list_to_set list_rec)
 ;;
+
+let rec rename_ast index expr = 
+match expr with
+| Const'(Sexpr(TaggedSexpr(name1, expr1))) -> 
+let expr_rename = rename_ast index (Const'(Sexpr(expr1))) in
+  (match expr_rename with
+  | Const'(Sexpr(expr)) -> Const'(Sexpr(TaggedSexpr(name1^(string_of_int (index.get ())), expr)))
+  | other -> Const'(Sexpr(Nil)))
+| Const'(Sexpr(TagRef(name1))) ->  Const'(Sexpr(TagRef(name1^(string_of_int (index.get ())))))
+| Const'(Sexpr(Pair(car, cdr))) -> 
+let car_rename = rename_ast index (Const'(Sexpr(car))) in
+let cdr_rename = rename_ast index (Const'(Sexpr(cdr))) in
+  (match car_rename, cdr_rename with
+  | Const'(Sexpr(s1)), Const'(Sexpr(s2)) -> Const'(Sexpr(Pair(s1, s2)))
+  | other1, other2 -> Const'(Sexpr(Nil)))
+| Set'(var,expr) -> Set'(var,(rename_ast index expr))
+| Def'(var,expr) -> Def'(var,(rename_ast index expr))
+| Seq'(expr_list) -> Seq'((List.map (rename_ast index) expr_list))
+| Or'(expr_list) -> Or'((List.map (rename_ast index) expr_list))
+| If'(expr1,expr2,expr3) -> If'((rename_ast index expr1),(rename_ast index expr2),(rename_ast index expr3))
+| BoxSet'(var,expr) -> BoxSet'(var,(rename_ast index expr))
+| LambdaSimple'(string_list,body) -> LambdaSimple'(string_list,(rename_ast index body))
+| LambdaOpt'(string_list,string,body) -> LambdaOpt'(string_list,string,(rename_ast index body))
+| Applic'(expr,expr_list) -> Applic'((rename_ast index expr),(List.map (rename_ast index) expr_list))
+| ApplicTP'(expr,expr_list) -> ApplicTP'((rename_ast index expr),(List.map (rename_ast index) expr_list))
+| other -> other
 
 let rec rename_tagged_sexpr index sexpr = 
 match sexpr with
@@ -220,7 +246,7 @@ let rec make_consts_tbl_single_sexpr first_pass tag_defs_collection sexpr acc_co
     | Sexpr(Symbol(str)) -> [(sexpr, (index.get_and_inc (9), "MAKE_LITERAL_SYMBOL(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(String(str))))^")"))]  
     | Sexpr(Pair(sexpr1, sexpr2)) -> [(sexpr, (index.get_and_inc (17), "MAKE_LITERAL_PAIR(const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr1)))^", const_tbl+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table (Sexpr(sexpr2)))^")"))]
     | Sexpr(TaggedSexpr(str, sexpr1)) -> make_consts_tbl_single_sexpr first_pass tag_defs_collection (Sexpr(sexpr1)) acc_const_table index
-    (* | Sexpr(TagRef(str)) -> [(sexpr, (index.get_and_inc (9), "consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table sexpr)))]    *)
+    | Sexpr(TagRef(str)) -> [(sexpr, (index.get_and_inc (9), "consts+"^(get_sexpr_address tag_defs_collection first_pass acc_const_table sexpr)))]   
         | other -> [];;
   
 
@@ -306,11 +332,32 @@ let make_consts_table tag_defs_collection sexpr_list =
        (* tag_defs_collection;; *)
       make_consts_table tag_defs_collection sexpr_set;;
 
-
+(* [(Void, (0, "MAKE_VOID")); (Sexpr Nil, (1, "MAKE_NIL"));
+ (Sexpr (Bool false), (2, "MAKE_BOOL(0)"));
+ (Sexpr (Bool true), (4, "MAKE_BOOL(1)"));
+ (Sexpr (TagRef "x0"), (6, "consts+67"));
+ (Sexpr (Number (Int 2)), (15, "MAKE_LITERAL_INTEGER(2)"));
+ (Sexpr (Number (Int 2)), (24, "MAKE_LITERAL_INTEGER(2)"));
+ (Sexpr (Pair (TaggedSexpr ("y0", Number (Int 2)), Nil)),
+  (33, "MAKE_LITERAL_PAIR(const_tbl+15, const_tbl+1)"));
+ (Sexpr (Pair (Pair (TaggedSexpr ("y0", Number (Int 2)), Nil), Nil)),
+  (50, "MAKE_LITERAL_PAIR(const_tbl+33, const_tbl+1)"));
+ (Sexpr
+   (Pair (TagRef "x0",
+     Pair (Pair (TaggedSexpr ("y0", Number (Int 2)), Nil), Nil))),
+  (67, "MAKE_LITERAL_PAIR(const_tbl+67, const_tbl+50)"));
+ (Sexpr
+   (Pair (TagRef "x0",
+     Pair (Pair (TaggedSexpr ("y0", Number (Int 2)), Nil), Nil))),
+  (84, "MAKE_LITERAL_PAIR(const_tbl+67, const_tbl+50)"))] *)
 
   let generate_const consts const = 
-      (* Printf.printf "const:" ; print_sexpr const; Printf.printf "\n"; *)
-    let const_address = (string_of_int (fst (List.assoc const consts))) in
+      Printf.printf "const:" ; print_sexpr const; Printf.printf "\n";
+      let const_address =
+      match const with 
+      | Sexpr(TaggedSexpr(name, sexpr)) -> (string_of_int (fst (List.assoc (Sexpr(sexpr)) consts)))
+      | other -> (string_of_int (fst (List.assoc const consts))) in
+
           (* Printf.printf "const success: \n" ; *)
     ";GENERATE CONST:\n" ^
     " mov rax, const_tbl+" ^ const_address ^ "\n ;<end const> \n";;
@@ -641,8 +688,14 @@ let make_consts_table tag_defs_collection sexpr_list =
           ;;
 
 
+  let index =
+        let n = ref (-1) in
+        { get = (fun () -> !n);
+          incr = (fun () -> n:= !n +1) } ;;
 
-  let generate consts fvars e = generate_wrap (-1) consts fvars e;;
+  let generate consts fvars e = 
+    index.incr ();
+    let renamed_ast = rename_ast index e in generate_wrap (-1) consts fvars renamed_ast;;
 
 end;;
 

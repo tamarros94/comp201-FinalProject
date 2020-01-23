@@ -1,1 +1,1 @@
-(cons* 'a 'b 'c)
+(define tmp0 #{x}= (#{x} (#{y}=2)))

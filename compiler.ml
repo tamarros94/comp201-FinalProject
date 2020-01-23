@@ -112,7 +112,7 @@ exception X_missing_input_file;;
 try
   let infile = Sys.argv.(1) in
   let code =  
-  (* (file_to_string "stdlib.scm") ^  *)
+  (file_to_string "stdlib.scm") ^ 
   (file_to_string infile) in
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in

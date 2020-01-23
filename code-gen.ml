@@ -353,7 +353,7 @@ let make_consts_table tag_defs_collection sexpr_list =
     | LambdaSimple'(string_list,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body false
     | LambdaOpt'(string_list,string,body) -> generate_simple_lambda (env_size+1) consts fvars string_list body true
     | Applic'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
-    | ApplicTP'(expr,expr_list) -> generate_tp_applic env_size consts fvars expr expr_list
+    | ApplicTP'(expr,expr_list) -> generate_applic env_size consts fvars expr expr_list
     | other -> ""
   and generate_param_set env_size consts fvars minor expr =
     let generated_expr = generate_wrap env_size consts fvars expr in

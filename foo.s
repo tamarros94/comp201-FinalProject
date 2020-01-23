@@ -21,8 +21,17 @@ MAKE_VOID
 MAKE_NIL
 MAKE_BOOL(0)
 MAKE_BOOL(1)
+MAKE_LITERAL_STRING "whatever"
+MAKE_LITERAL_SYMBOL(const_tbl+6)
 MAKE_LITERAL_INTEGER(1)
-MAKE_LITERAL_INTEGER(2)
+MAKE_LITERAL_INTEGER(0)
+MAKE_LITERAL_CHAR(0)
+MAKE_LITERAL_STRING "a"
+MAKE_LITERAL_SYMBOL(const_tbl+52)
+MAKE_LITERAL_STRING "b"
+MAKE_LITERAL_SYMBOL(const_tbl+71)
+MAKE_LITERAL_STRING "c"
+MAKE_LITERAL_SYMBOL(const_tbl+90)
 
 ;;; These macro definitions are required for the primitive
 ;;; definitions in the epilogue to work properly
@@ -32,6 +41,26 @@ MAKE_LITERAL_INTEGER(2)
 %define SOB_TRUE_ADDRESS const_tbl+4
 
 fvar_tbl:
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
+dq T_UNDEFINED
 dq T_UNDEFINED
 dq T_UNDEFINED
 dq T_UNDEFINED
@@ -155,19 +184,158 @@ user_code_fragment:
 
 ;GENERATE DEFINE
 ;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+224] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 5
 ;GENERATE FIRST SIMPLE LAMBDA:
 MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_1)
     jmp end_lambda_body_1
 lambda_body_1:
 push rbp
     mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_2
+    
+    extend_env_loop_2:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_2
+    
+    end_extend_env_loop_2:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_2
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_2:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_2
+
+    end_copy_param_loop_2: 
+MAKE_CLOSURE(rax, r9,lambda_body_2)
+    jmp end_lambda_body_2
+lambda_body_2:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_3
+    
+    extend_env_loop_3:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_3
+    
+    end_extend_env_loop_3:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_3
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_3:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_3
+
+    end_copy_param_loop_3: 
+MAKE_CLOSURE(rax, r9,lambda_body_3)
+    jmp end_lambda_body_3
+lambda_body_3:
+push rbp
+    mov rbp,rsp 
 ;GENERATE LAMBDA OPT:
 mov r8, qword [rbp+8*3] ; r8 = n 
-mov r9, 0 ; r9 = expected 
+mov r9, 2 ; r9 = expected 
 mov r10, r8
       sub r10, r9 ; r10 = list size = n - expected
       cmp r10, 0
-      je end_lambda_opt_1
+      je end_lambda_opt_3
 mov rax, r9 ; rax = expected
       add rax, 4 ; rax = expected+4
       shl rax, 3 ; rax = (expected+4)*8
@@ -176,19 +344,1712 @@ mov rax, r9 ; rax = expected
 MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
           mov r9, rax ; r9 points to opt list
 mov rcx, r10
-          build_opt_list_1:
+          build_opt_list_3:
           mov r12, qword [r11] ; r12 = curr arg
           mov qword [rax + 1], r12 ; place curr arg in curr car
           cmp rcx, 1
-          je end_build_opt_list_1
+          je end_build_opt_list_3
           MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
           mov qword [rax + 9], r13
           add rax, 17
           add r11, 8
-          loop build_opt_list_1
-          end_build_opt_list_1:
+          loop build_opt_list_3
+          end_build_opt_list_3:
+          mov PVAR(2), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_3:
+;end lambda opt>
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse4
+;GENERATE CONST:
+ mov rax, const_tbl+1
+ ;<end const> 
+
+jmp Lexit4
+Lelse4:
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse5
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 1
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit5
+Lelse5:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+232] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit5:
+ ;<end if> 
+
+Lexit4:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_3:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE BOX GET:
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_2:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_1: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+232], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 3
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_6)
+    jmp end_lambda_body_6
+lambda_body_6:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_7
+    
+    extend_env_loop_7:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_7
+    
+    end_extend_env_loop_7:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_7
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_7:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_7
+
+    end_copy_param_loop_7: 
+MAKE_CLOSURE(rax, r9,lambda_body_7)
+    jmp end_lambda_body_7
+lambda_body_7:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_8
+    
+    extend_env_loop_8:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_8
+    
+    end_extend_env_loop_8:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_8
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_8:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_8
+
+    end_copy_param_loop_8: 
+MAKE_CLOSURE(rax, r9,lambda_body_8)
+    jmp end_lambda_body_8
+lambda_body_8:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse9
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+
+jmp Lexit9
+Lelse9:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 3
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+240] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit9:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_8:
+
+ ;<end simple lambda> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_7:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_6: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+240], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 3
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_10)
+    jmp end_lambda_body_10
+lambda_body_10:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_11
+    
+    extend_env_loop_11:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_11
+    
+    end_extend_env_loop_11:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_11
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_11:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_11
+
+    end_copy_param_loop_11: 
+MAKE_CLOSURE(rax, r9,lambda_body_11)
+    jmp end_lambda_body_11
+lambda_body_11:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_12
+    
+    extend_env_loop_12:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_12
+    
+    end_extend_env_loop_12:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_12
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_12:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_12
+
+    end_copy_param_loop_12: 
+MAKE_CLOSURE(rax, r9,lambda_body_12)
+    jmp end_lambda_body_12
+lambda_body_12:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse13
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+
+jmp Lexit13
+Lelse13:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 3
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+248] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 48] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit13:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_12:
+
+ ;<end simple lambda> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_11:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_10: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+248], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_14)
+    jmp end_lambda_body_14
+lambda_body_14:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_15
+    
+    extend_env_loop_15:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_15
+    
+    end_extend_env_loop_15:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_15
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_15:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_15
+
+    end_copy_param_loop_15: 
+MAKE_CLOSURE(rax, r9,lambda_body_15)
+    jmp end_lambda_body_15
+lambda_body_15:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 0 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_15
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_15:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_15
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_15
+          end_build_opt_list_15:
           mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
-          end_lambda_opt_1:
+          end_lambda_opt_15:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+1
+ ;<end const> 
+push rax 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_16
+    
+    extend_env_loop_16:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_16
+    
+    end_extend_env_loop_16:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_16
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_16:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_16
+
+    end_copy_param_loop_16: 
+MAKE_CLOSURE(rax, r9,lambda_body_16)
+    jmp end_lambda_body_16
+lambda_body_16:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse17
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+
+jmp Lexit17
+Lelse17:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit17:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_16:
+
+ ;<end simple lambda> 
+push rax 
+push 3
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+248] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_15:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_14: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+256], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+248] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 3
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_18)
+    jmp end_lambda_body_18
+lambda_body_18:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_19
+    
+    extend_env_loop_19:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_19
+    
+    end_extend_env_loop_19:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_19
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_19:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_19
+
+    end_copy_param_loop_19: 
+MAKE_CLOSURE(rax, r9,lambda_body_19)
+    jmp end_lambda_body_19
+lambda_body_19:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 0 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_19
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_19:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_19
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_19
+          end_build_opt_list_19:
+          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_19:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+1
+ ;<end const> 
+push rax 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_20
+    
+    extend_env_loop_20:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_20
+    
+    end_extend_env_loop_20:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_20
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_20:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_20
+
+    end_copy_param_loop_20: 
+MAKE_CLOSURE(rax, r9,lambda_body_20)
+    jmp end_lambda_body_20
+lambda_body_20:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse21
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+
+jmp Lexit21
+Lelse21:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit21:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_20:
+
+ ;<end simple lambda> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_19:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_18: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+264], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_22)
+    jmp end_lambda_body_22
+lambda_body_22:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 0 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_22
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_22:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_22
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_22
+          end_build_opt_list_22:
+          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_22:
 ;end lambda opt>
 ;GENERATE PARAM GET:
 mov rax, qword [rbp + 32] 
@@ -196,9 +2057,4886 @@ mov rax, qword [rbp + 32]
 
     leave
     ret
-end_lambda_body_1: 
+end_lambda_body_22: 
  ;<end first simple lambda> 
-mov qword [fvar_tbl+232], rax
+mov qword [fvar_tbl+272], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+24] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 3
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_23)
+    jmp end_lambda_body_23
+lambda_body_23:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_24
+    
+    extend_env_loop_24:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_24
+    
+    end_extend_env_loop_24:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_24
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_24:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_24
+
+    end_copy_param_loop_24: 
+MAKE_CLOSURE(rax, r9,lambda_body_24)
+    jmp end_lambda_body_24
+lambda_body_24:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_25
+    
+    extend_env_loop_25:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_25
+    
+    end_extend_env_loop_25:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_25
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_25:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_25
+
+    end_copy_param_loop_25: 
+MAKE_CLOSURE(rax, r9,lambda_body_25)
+    jmp end_lambda_body_25
+lambda_body_25:
+push rbp
+    mov rbp,rsp 
+;GENERATE OR:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit26 
+
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse27
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 1
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+280] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit27
+Lelse27:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit27:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit26 
+
+Lexit26:
+ ;<end or> 
+
+    leave
+    ret
+end_lambda_body_25:
+
+ ;<end simple lambda> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_24:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_23: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+280], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+136] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+240] 
+ ;<end fvar> 
+push rax 
+push 2
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_28)
+    jmp end_lambda_body_28
+lambda_body_28:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_29
+    
+    extend_env_loop_29:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_29
+    
+    end_extend_env_loop_29:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_29
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_29:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_29
+
+    end_copy_param_loop_29: 
+MAKE_CLOSURE(rax, r9,lambda_body_29)
+    jmp end_lambda_body_29
+lambda_body_29:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+41
+ ;<end const> 
+push rax 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_30
+    
+    extend_env_loop_30:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_30
+    
+    end_extend_env_loop_30:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_30
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_30:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_30
+
+    end_copy_param_loop_30: 
+MAKE_CLOSURE(rax, r9,lambda_body_30)
+    jmp end_lambda_body_30
+lambda_body_30:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+32
+ ;<end const> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_30:
+
+ ;<end simple lambda> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_29:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_28: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+288], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+96] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 3
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_31)
+    jmp end_lambda_body_31
+lambda_body_31:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_32
+    
+    extend_env_loop_32:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_32
+    
+    end_extend_env_loop_32:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_32
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_32:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_32
+
+    end_copy_param_loop_32: 
+MAKE_CLOSURE(rax, r9,lambda_body_32)
+    jmp end_lambda_body_32
+lambda_body_32:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_32
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_32:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_32
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_32
+          end_build_opt_list_32:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_32:
+;end lambda opt>
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse33
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+50
+ ;<end const> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit33
+Lelse33:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit33:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_32:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_31: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+96], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_34)
+    jmp end_lambda_body_34
+lambda_body_34:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse35
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+jmp Lexit35
+Lelse35:
+;GENERATE CONST:
+ mov rax, const_tbl+4
+ ;<end const> 
+
+Lexit35:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_34: 
+ ;<end first simple lambda> 
+mov qword [fvar_tbl+304], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+16] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+8] 
+ ;<end fvar> 
+push rax 
+push 2
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_36)
+    jmp end_lambda_body_36
+lambda_body_36:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_37
+    
+    extend_env_loop_37:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_37
+    
+    end_extend_env_loop_37:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_37
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_37:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_37
+
+    end_copy_param_loop_37: 
+MAKE_CLOSURE(rax, r9,lambda_body_37)
+    jmp end_lambda_body_37
+lambda_body_37:
+push rbp
+    mov rbp,rsp 
+;GENERATE OR:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit38 
+
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit38 
+
+Lexit38:
+ ;<end or> 
+
+    leave
+    ret
+end_lambda_body_37:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_36: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+312], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+136] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+240] 
+ ;<end fvar> 
+push rax 
+push 2
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_39)
+    jmp end_lambda_body_39
+lambda_body_39:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_40
+    
+    extend_env_loop_40:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_40
+    
+    end_extend_env_loop_40:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_40
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_40:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_40
+
+    end_copy_param_loop_40: 
+MAKE_CLOSURE(rax, r9,lambda_body_40)
+    jmp end_lambda_body_40
+lambda_body_40:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 0 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_40
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_40:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_40
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_40
+          end_build_opt_list_40:
+          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_40:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+41
+ ;<end const> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_40:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_39: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+136], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+144] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+240] 
+ ;<end fvar> 
+push rax 
+push 2
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_41)
+    jmp end_lambda_body_41
+lambda_body_41:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_42
+    
+    extend_env_loop_42:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_42
+    
+    end_extend_env_loop_42:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_42
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_42:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_42
+
+    end_copy_param_loop_42: 
+MAKE_CLOSURE(rax, r9,lambda_body_42)
+    jmp end_lambda_body_42
+lambda_body_42:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 0 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_42
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_42:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_42
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_42
+          end_build_opt_list_42:
+          mov PVAR(0), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_42:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+32
+ ;<end const> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_42:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_41: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+144], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+136] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+152] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+224] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_43)
+    jmp end_lambda_body_43
+lambda_body_43:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_44
+    
+    extend_env_loop_44:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_44
+    
+    end_extend_env_loop_44:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_44
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_44:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_44
+
+    end_copy_param_loop_44: 
+MAKE_CLOSURE(rax, r9,lambda_body_44)
+    jmp end_lambda_body_44
+lambda_body_44:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_44
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_44:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_44
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_44
+          end_build_opt_list_44:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_44:
+;end lambda opt>
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse45
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+41
+ ;<end const> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit45
+Lelse45:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit45:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_44:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_43: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+152], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+144] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+160] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+224] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_46)
+    jmp end_lambda_body_46
+lambda_body_46:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_47
+    
+    extend_env_loop_47:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_47
+    
+    end_extend_env_loop_47:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_47
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_47:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_47
+
+    end_copy_param_loop_47: 
+MAKE_CLOSURE(rax, r9,lambda_body_47)
+    jmp end_lambda_body_47
+lambda_body_47:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_47
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_47:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_47
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_47
+          end_build_opt_list_47:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_47:
+;end lambda opt>
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse48
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+32
+ ;<end const> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit48
+Lelse48:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit48:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_47:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_46: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+160], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+224] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+176] 
+ ;<end fvar> 
+push rax 
+push 5
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_49)
+    jmp end_lambda_body_49
+lambda_body_49:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_50
+    
+    extend_env_loop_50:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_50
+    
+    end_extend_env_loop_50:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_50
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_50:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_50
+
+    end_copy_param_loop_50: 
+MAKE_CLOSURE(rax, r9,lambda_body_50)
+    jmp end_lambda_body_50
+lambda_body_50:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_51
+    
+    extend_env_loop_51:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_51
+    
+    end_extend_env_loop_51:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_51
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_51:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_51
+
+    end_copy_param_loop_51: 
+MAKE_CLOSURE(rax, r9,lambda_body_51)
+    jmp end_lambda_body_51
+lambda_body_51:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_51
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_51:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_51
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_51
+          end_build_opt_list_51:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_51:
+;end lambda opt>
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse52
+;GENERATE CONST:
+ mov rax, const_tbl+4
+ ;<end const> 
+
+jmp Lexit52
+Lelse52:
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse53
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+push rax 
+push 3
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit53
+Lelse53:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit53:
+ ;<end if> 
+
+Lexit52:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_51:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE BOX GET:
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_50:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_49: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+176], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+168] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_54)
+    jmp end_lambda_body_54
+lambda_body_54:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_55
+    
+    extend_env_loop_55:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_55
+    
+    end_extend_env_loop_55:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_55
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_55:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_55
+
+    end_copy_param_loop_55: 
+MAKE_CLOSURE(rax, r9,lambda_body_55)
+    jmp end_lambda_body_55
+lambda_body_55:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_57
+    
+    extend_env_loop_57:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_57
+    
+    end_extend_env_loop_57:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_57
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_57:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_57
+
+    end_copy_param_loop_57: 
+MAKE_CLOSURE(rax, r9,lambda_body_57)
+    jmp end_lambda_body_57
+lambda_body_57:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse58
+;GENERATE CONST:
+ mov rax, const_tbl+4
+ ;<end const> 
+
+jmp Lexit58
+Lelse58:
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse59
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit59
+Lelse59:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit59:
+ ;<end if> 
+
+Lexit58:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_57:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_56
+    
+    extend_env_loop_56:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_56
+    
+    end_extend_env_loop_56:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_56
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_56:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_56
+
+    end_copy_param_loop_56: 
+MAKE_CLOSURE(rax, r9,lambda_body_56)
+    jmp end_lambda_body_56
+lambda_body_56:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_56
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_56:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_56
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_56
+          end_build_opt_list_56:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_56:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_56:
+
+ ;<end simple lambda> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_55:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_54: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+168], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+304] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+176] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+168] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+32] 
+ ;<end fvar> 
+push rax 
+push 6
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_60)
+    jmp end_lambda_body_60
+lambda_body_60:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_61
+    
+    extend_env_loop_61:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_61
+    
+    end_extend_env_loop_61:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_61
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_61:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_61
+
+    end_copy_param_loop_61: 
+MAKE_CLOSURE(rax, r9,lambda_body_61)
+    jmp end_lambda_body_61
+lambda_body_61:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_63
+    
+    extend_env_loop_63:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_63
+    
+    end_extend_env_loop_63:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_63
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_63:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_63
+
+    end_copy_param_loop_63: 
+MAKE_CLOSURE(rax, r9,lambda_body_63)
+    jmp end_lambda_body_63
+lambda_body_63:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse64
+;GENERATE CONST:
+ mov rax, const_tbl+4
+ ;<end const> 
+
+jmp Lexit64
+Lelse64:
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE OR:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit66 
+
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit66 
+
+Lexit66:
+ ;<end or> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse65
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 40] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit65
+Lelse65:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit65:
+ ;<end if> 
+
+Lexit64:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_63:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_62
+    
+    extend_env_loop_62:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_62
+    
+    end_extend_env_loop_62:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_62
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_62:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_62
+
+    end_copy_param_loop_62: 
+MAKE_CLOSURE(rax, r9,lambda_body_62)
+    jmp end_lambda_body_62
+lambda_body_62:
+push rbp
+    mov rbp,rsp 
+;GENERATE LAMBDA OPT:
+mov r8, qword [rbp+8*3] ; r8 = n 
+mov r9, 1 ; r9 = expected 
+mov r10, r8
+      sub r10, r9 ; r10 = list size = n - expected
+      cmp r10, 0
+      je end_lambda_opt_62
+mov rax, r9 ; rax = expected
+      add rax, 4 ; rax = expected+4
+      shl rax, 3 ; rax = (expected+4)*8
+      add rax, rbp ; rax = rbp + (expected+4)*8
+      mov r11, rax ; r11 points to first opt arg
+MAKE_PAIR(rax, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS)
+          mov r9, rax ; r9 points to opt list
+mov rcx, r10
+          build_opt_list_62:
+          mov r12, qword [r11] ; r12 = curr arg
+          mov qword [rax + 1], r12 ; place curr arg in curr car
+          cmp rcx, 1
+          je end_build_opt_list_62
+          MAKE_PAIR (r13, SOB_NIL_ADDRESS, SOB_NIL_ADDRESS) 
+          mov qword [rax + 9], r13
+          add rax, 17
+          add r11, 8
+          loop build_opt_list_62
+          end_build_opt_list_62:
+          mov PVAR(1), r9 ; first opt arg has been replaced with a pointer to the opt_list
+          end_lambda_opt_62:
+;end lambda opt>
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_62:
+
+ ;<end simple lambda> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_61:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_60: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+368], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+176] 
+ ;<end fvar> 
+push rax 
+push 1
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_67)
+    jmp end_lambda_body_67
+lambda_body_67:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_68
+    
+    extend_env_loop_68:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_68
+    
+    end_extend_env_loop_68:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_68
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_68:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_68
+
+    end_copy_param_loop_68: 
+MAKE_CLOSURE(rax, r9,lambda_body_68)
+    jmp end_lambda_body_68
+lambda_body_68:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+41
+ ;<end const> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_68:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_67: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+376], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+152] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+168] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+72] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+80] 
+ ;<end fvar> 
+push rax 
+push 4
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_69)
+    jmp end_lambda_body_69
+lambda_body_69:
+push rbp
+    mov rbp,rsp 
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_70
+    
+    extend_env_loop_70:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_70
+    
+    end_extend_env_loop_70:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_70
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_70:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_70
+
+    end_copy_param_loop_70: 
+MAKE_CLOSURE(rax, r9,lambda_body_70)
+    jmp end_lambda_body_70
+lambda_body_70:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_71
+    
+    extend_env_loop_71:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_71
+    
+    end_extend_env_loop_71:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_71
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_71:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_71
+
+    end_copy_param_loop_71: 
+MAKE_CLOSURE(rax, r9,lambda_body_71)
+    jmp end_lambda_body_71
+lambda_body_71:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 24
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 3
+    cmp rcx, 1
+    je end_extend_env_loop_72
+    
+    extend_env_loop_72:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_72
+    
+    end_extend_env_loop_72:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_72
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_72:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_72
+
+    end_copy_param_loop_72: 
+MAKE_CLOSURE(rax, r9,lambda_body_72)
+    jmp end_lambda_body_72
+lambda_body_72:
+push rbp
+    mov rbp,rsp 
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+41
+ ;<end const> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 16]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse73
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+
+jmp Lexit73
+Lelse73:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 16]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+200] 
+ ;<end fvar> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+32
+ ;<end const> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 16]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+Lexit73:
+ ;<end if> 
+
+    leave
+    ret
+end_lambda_body_72:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+1
+ ;<end const> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+32
+ ;<end const> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_71:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_70:
+
+ ;<end simple lambda> 
+
+    leave
+    ret
+end_lambda_body_69: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+384], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end fvar set> 
+
+ ;<end define> 
+
+	call write_sob_if_not_void
+
+;GENERATE DEFINE
+;GENERATE FVAR SET:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+112] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+192] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+184] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+128] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+48] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+40] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+24] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+8] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+16] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+384] 
+ ;<end fvar> 
+push rax 
+;GENERATE FVAR:
+mov rax, qword [fvar_tbl+176] 
+ ;<end fvar> 
+push rax 
+push 11
+;GENERATE FIRST SIMPLE LAMBDA:
+MAKE_CLOSURE(rax, SOB_NIL_ADDRESS,lambda_body_74)
+    jmp end_lambda_body_74
+lambda_body_74:
+push rbp
+    mov rbp,rsp 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE CONST:
+ mov rax, const_tbl+23
+ ;<end const> 
+push rax 
+push 1
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 8
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 1
+    cmp rcx, 1
+    je end_extend_env_loop_75
+    
+    extend_env_loop_75:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_75
+    
+    end_extend_env_loop_75:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_75
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_75:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_75
+
+    end_copy_param_loop_75: 
+MAKE_CLOSURE(rax, r9,lambda_body_75)
+    jmp end_lambda_body_75
+lambda_body_75:
+push rbp
+    mov rbp,rsp 
+;GENERATE SEQUENCE:
+;GENERATE PARAM SET:
+;GENERATE BOX:
+MALLOC r8, 8 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov qword [r8], rax
+   mov rax, r8 
+ ;<end box> 
+mov qword [rbp + 32], rax
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end param set> 
+;GENERATE SEQUENCE:
+;GENERATE BOX SET:
+;GENERATE SIMPLE LAMBDA:
+MALLOC rax, 16
+mov r9, rax ;r9 points at env[0]
+    mov r8, qword [rbp+16] ;r8 points at the source env
+    add rax, 8 ; rax points at env[1]
+    mov rcx, 2
+    cmp rcx, 1
+    je end_extend_env_loop_76
+    
+    extend_env_loop_76:
+    mov r10, qword [r8]
+    mov qword [rax], r10
+    add r8, 8
+    add rax, 8
+    loop extend_env_loop_76
+    
+    end_extend_env_loop_76:
+
+    push r9
+    mov rcx, qword [rbp+8*3] 
+    inc rcx ;include magic params
+    shl rcx, 3 ;rcx = size of params list (including magic)
+    MALLOC rax, rcx ;allocate room for param list
+    mov qword [rax], SOB_NIL_ADDRESS ;param list is empty by default
+    pop r9
+    mov qword [r9], rax ;place pointer to param list in env[0]
+
+    shr rcx, 3 ;rcx holds num of params
+    cmp rcx, 0              
+    je end_copy_param_loop_76
+    mov r10, rbp
+    add r10, 8*4 ;r10 points to beginning of param list on stack
+
+    copy_param_loop_76:
+    mov r11, qword [r10]
+    mov qword [rax], r11
+    add r10, 8
+    add rax, 8
+    loop copy_param_loop_76
+
+    end_copy_param_loop_76: 
+MAKE_CLOSURE(rax, r9,lambda_body_76)
+    jmp end_lambda_body_76
+lambda_body_76:
+push rbp
+    mov rbp,rsp 
+;GENERATE OR:
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse87
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 16] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse88
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit88
+Lelse88:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit88:
+ ;<end if> 
+
+jmp Lexit87
+Lelse87:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit87:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse85
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 24] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse86
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit86
+Lelse86:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit86:
+ ;<end if> 
+
+jmp Lexit85
+Lelse85:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit85:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse82
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 32] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse83
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 64] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 64] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse84
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 72] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 72] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit84
+Lelse84:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit84:
+ ;<end if> 
+
+jmp Lexit83
+Lelse83:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit83:
+ ;<end if> 
+
+jmp Lexit82
+Lelse82:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit82:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 40] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse80
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 40] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse81
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 80] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 80] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit81
+Lelse81:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit81:
+ ;<end if> 
+
+jmp Lexit80
+Lelse80:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit80:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 48] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse78
+;GENERATE IF:
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 48] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    je Lelse79
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 1
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 8] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+push rax 
+push 2
+;GENERATE BOX GET:
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 0]
+    mov rax, qword [rax + 0] 
+ ;<end bound get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+jmp Lexit79
+Lelse79:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit79:
+ ;<end if> 
+
+jmp Lexit78
+Lelse78:
+;GENERATE CONST:
+ mov rax, const_tbl+2
+ ;<end const> 
+
+Lexit78:
+ ;<end if> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+;GENERATE APPLIC
+mov rax, SOB_NIL_ADDRESS
+    push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 40] 
+ ;<end param get> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+push rax 
+push 2
+;GENERATE BOUND GET:
+mov rax, qword [rbp + 16]
+    mov rax, qword [rax + 8]
+    mov rax, qword [rax + 56] 
+ ;<end bound get> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+cmp rax, SOB_FALSE_ADDRESS
+    jne Lexit77 
+
+Lexit77:
+ ;<end or> 
+
+    leave
+    ret
+end_lambda_body_76:
+
+ ;<end simple lambda> 
+push rax 
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+pop qword [rax]
+    mov rax, SOB_VOID_ADDRESS 
+ ;<end box set> 
+;GENERATE BOX GET:
+;GENERATE PARAM GET:
+mov rax, qword [rbp + 32] 
+ ;<end param get> 
+mov rax, qword [rax] 
+ ;<end box get> 
+; <end sequence> 
+; <end sequence> 
+
+    leave
+    ret
+end_lambda_body_75:
+
+ ;<end simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+
+    leave
+    ret
+end_lambda_body_74: 
+ ;<end first simple lambda> 
+CLOSURE_ENV r9, rax
+    push r9 
+CLOSURE_CODE r10, rax
+
+    call r10
+
+    add rsp , 8*1 ; pop env
+    pop rbx ; pop arg count + magic
+    add rbx, 1
+    shl rbx , 3 ; rbx = rbx * 8
+    add rsp , rbx; pop args
+ ;<end applic> 
+mov qword [fvar_tbl+392], rax
     mov rax, SOB_VOID_ADDRESS 
  ;<end fvar set> 
 
@@ -210,24 +6948,20 @@ mov qword [fvar_tbl+232], rax
 mov rax, SOB_NIL_ADDRESS
     push rax 
 ;GENERATE CONST:
- mov rax, const_tbl+1
+ mov rax, const_tbl+100
  ;<end const> 
 push rax 
 ;GENERATE CONST:
- mov rax, const_tbl+15
+ mov rax, const_tbl+81
  ;<end const> 
 push rax 
 ;GENERATE CONST:
- mov rax, const_tbl+6
+ mov rax, const_tbl+62
  ;<end const> 
 push rax 
+push 3
 ;GENERATE FVAR:
-mov rax, qword [fvar_tbl+232] 
- ;<end fvar> 
-push rax 
-push 4
-;GENERATE FVAR:
-mov rax, qword [fvar_tbl+224] 
+mov rax, qword [fvar_tbl+256] 
  ;<end fvar> 
 CLOSURE_ENV r9, rax
     push r9 

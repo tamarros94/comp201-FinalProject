@@ -919,9 +919,12 @@ loop .extract_list
 .skip_list:
 mov rcx, PARAM_COUNT 
 sub rcx, 2 ;rcx=n-2
+cmp rcx, 0
+je .skip_params
 mov r8, 2 ;i=2
 
 .copy_params:
+mov r9, const_tbl
 mov r9, rcx ;r9=n-2
 add r9, 4 ;r9=(n-2)+4=n+2
 shl r9, 3 ;r9=8*(n+2)
@@ -937,6 +940,7 @@ mov qword [r14], r12 ; [rbp + 8*(n+2)] -> [rbp - (8 * (len + i))]
 inc r8 ;i++
 loop .copy_params
 
+.skip_params:
 mov rax, r11 ;rax=len
 add rax, PARAM_COUNT ;rax=len+n
 sub rax, 2 ;rax = (len+n)-2 = new params len

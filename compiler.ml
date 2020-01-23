@@ -23,11 +23,11 @@ let primitive_names_to_labels =
   ; "apply", "apply_label"];;
 
 let make_prologue consts_tbl fvars_tbl =
-  let make_primitive_closure (prim, label) =
+  let make_primitive_closure (prim, label) = 
     (* Adapt the addressing here to your fvar addressing scheme:
        This imlementation assumes fvars are offset from the base label fvar_tbl *)
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
-    mov [fvar_tbl+ 8 * " ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in
+    mov [fvar_tbl+ 8 * " ^  (string_of_int (List.assoc prim fvars_tbl)) ^ "], rax" in 
   let constant_bytes (c, (a, s)) = s in 
 "
 ;;; All the macros and the scheme-object printing procedure
@@ -107,6 +107,40 @@ user_code_fragment:
    primitive procedures are implemented and included in the output assembly. *)
 let epilogue = "";;
 
+  type counter = { get : unit -> int;
+                     incr : unit -> unit };;
+
+let rec rename_ast index expr = 
+match expr with
+| Const'(Sexpr(TaggedSexpr(name1, expr1))) -> 
+let expr_rename = rename_ast index (Const'(Sexpr(expr1))) in
+  (match expr_rename with
+  | Const'(Sexpr(expr)) -> Const'(Sexpr(TaggedSexpr(name1^(string_of_int (index.get ())), expr)))
+  | other -> Const'(Sexpr(Nil)))
+| Const'(Sexpr(TagRef(name1))) ->  Const'(Sexpr(TagRef(name1^(string_of_int (index.get ())))))
+| Const'(Sexpr(Pair(car, cdr))) -> 
+let car_rename = rename_ast index (Const'(Sexpr(car))) in
+let cdr_rename = rename_ast index (Const'(Sexpr(cdr))) in
+  (match car_rename, cdr_rename with
+  | Const'(Sexpr(s1)), Const'(Sexpr(s2)) -> Const'(Sexpr(Pair(s1, s2)))
+  | other1, other2 -> Const'(Sexpr(Nil)))
+| Set'(var,expr) -> Set'(var,(rename_ast index expr))
+| Def'(var,expr) -> Def'(var,(rename_ast index expr))
+| Seq'(expr_list) -> Seq'((List.map (rename_ast index) expr_list))
+| Or'(expr_list) -> Or'((List.map (rename_ast index) expr_list))
+| If'(expr1,expr2,expr3) -> If'((rename_ast index expr1),(rename_ast index expr2),(rename_ast index expr3))
+| BoxSet'(var,expr) -> BoxSet'(var,(rename_ast index expr))
+| LambdaSimple'(string_list,body) -> LambdaSimple'(string_list,(rename_ast index body))
+| LambdaOpt'(string_list,string,body) -> LambdaOpt'(string_list,string,(rename_ast index body))
+| Applic'(expr,expr_list) -> Applic'((rename_ast index expr),(List.map (rename_ast index) expr_list))
+| ApplicTP'(expr,expr_list) -> ApplicTP'((rename_ast index expr),(List.map (rename_ast index) expr_list))
+| other -> other;;
+
+let index =
+      let n = ref (-0) in
+      { get = (fun () -> !n);
+        incr = (fun () -> n:= !n +1) } ;;
+
 exception X_missing_input_file;;
 
 try
@@ -115,6 +149,7 @@ try
   (file_to_string "stdlib.scm") ^ 
   (file_to_string infile) in
   let asts = string_to_asts code in
+  let asts = List.map (fun ast -> index.incr (); rename_ast index ast) asts in
   let consts_tbl = Code_Gen.make_consts_tbl asts in
   let fvars_tbl = Code_Gen.make_fvars_tbl asts in
   let generate = Code_Gen.generate consts_tbl fvars_tbl in

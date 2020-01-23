@@ -175,7 +175,6 @@ let rec parse_exp sexpr = match sexpr with
   | TaggedSexpr(e,Number(x)) -> Const(Sexpr(TaggedSexpr(e, Number(x))))
   | TaggedSexpr(e,String(x)) -> Const(Sexpr(TaggedSexpr(e, String(x))))
   | TaggedSexpr(e,TagRef(x)) -> Const(Sexpr(TaggedSexpr(e, TagRef(x))))
-  (* | TaggedSexpr(e,whatever) -> Const(Sexpr(TaggedSexpr(e, Const(whatever)))) *)
 (*variables*)
   | Symbol(e) -> tag_parse_var e
 (*conditionals*)        

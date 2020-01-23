@@ -73,7 +73,7 @@ main:
     push rbp
 
     ;; set up the heap
-    mov rdi, GB(4)
+    mov rdi, GB(1)
     call malloc
     mov [malloc_pointer], rax
 
@@ -1150,13 +1150,14 @@ CDR r9, r9
 inc r11
 jmp .len
 
-mov r9, r10
 
 .skip_list:
+mov r9, r10
 mov rcx, r11 
 mov r8, r11 ;r8=len
 mov r10, 1 ;i=1
 
+gdb:
 .extract_list:
 mov rax, qword [r9+TYPE_SIZE] ;rax=car
 mov r13, r8 ;r13=len
@@ -1165,7 +1166,7 @@ shl r13, 3 ;r8=8*(len+i)
 mov r12, rbp
 sub r12, r13 ;r12=rbp-8*(len+i)
 mov qword [r12], rax
-add r9, 8
+mov r9, qword [r9+TYPE_SIZE+8]
 dec r10
 loop .extract_list
 
@@ -1254,7 +1255,7 @@ mov rax, r15
 CLOSURE_CODE r10, rax
 add rsp, 8
 mov rbp, r8
-call r10
+jmp r10
 
 leave
 ret

@@ -2312,10 +2312,10 @@ index ee63dfb..d88c1e7 100644
 +.newline:
 +	db CHAR_NEWLINE, 0
 diff --git a/prims.s b/prims.s
-index 159b4eb..13ebe57 100644
+index 159b4eb..f24a52c 100644
 --- a/prims.s
 +++ b/prims.s
-@@ -817,3 +817,192 @@ bin_equ:
+@@ -817,3 +817,196 @@ bin_equ:
      leave
      ret
  
@@ -2421,9 +2421,12 @@ index 159b4eb..13ebe57 100644
 +.skip_list:
 +mov rcx, PARAM_COUNT 
 +sub rcx, 2 ;rcx=n-2
++cmp rcx, 0
++je .skip_params
 +mov r8, 2 ;i=2
 +
 +.copy_params:
++mov r9, const_tbl
 +mov r9, rcx ;r9=n-2
 +add r9, 4 ;r9=(n-2)+4=n+2
 +shl r9, 3 ;r9=8*(n+2)
@@ -2439,6 +2442,7 @@ index 159b4eb..13ebe57 100644
 +inc r8 ;i++
 +loop .copy_params
 +
++.skip_params:
 +mov rax, r11 ;rax=len
 +add rax, PARAM_COUNT ;rax=len+n
 +sub rax, 2 ;rax = (len+n)-2 = new params len
@@ -3322,7 +3326,7 @@ index 2f5ff59..1f73ddb 100644
 +end;; (* struct Semantics *)
 \ No newline at end of file
 diff --git a/stdlib.scm b/stdlib.scm
-index 8bce64b..6ddf569 100644
+index 8bce64b..26ea2e0 100644
 --- a/stdlib.scm
 +++ b/stdlib.scm
 @@ -12,19 +12,41 @@
@@ -3356,23 +3360,23 @@ index 8bce64b..6ddf569 100644
 +      (f (car list)
 +         (fold-right f acc (cdr list)))))))
 +      fold-right-loop)))
++
  
  (define cons*
 -  #;(Add your implementation here
 -     Note: The file won't compile like this, beacuase your tag-parser requires define to have a second expression.
 -     This is on purpose, so you don't compile the library without completing this implementation by mistake.))
-+(let ((null? null?)
-+	(cons cons)
-+	(car car)
-+	(cdr cdr))
-+	(lambda x
-+		(fold-right
-+		(lambda (a acc)
-+			(if (null? acc)
-+			a
-+			(cons a acc)))
-+		'()
-+		x))))
++	(let ((null? null?)
++		(car car)
++		(cdr cdr)
++		(cons cons)
++		(apply apply))
++	(letrec ((cons-loop  (lambda list
++	(if (null? (cdr list))
++		(car list)
++		(cons (car list)
++			(apply cons* (cdr list)))))))
++		cons-loop)))
  
  (define append
    (let ((null? null?)

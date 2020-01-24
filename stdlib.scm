@@ -34,19 +34,19 @@
          (fold-right f acc (cdr list)))))))
       fold-right-loop)))
 
+
 (define cons*
-(let ((null? null?)
-	(cons cons)
-	(car car)
-	(cdr cdr))
-	(lambda x
-		(fold-right
-		(lambda (a acc)
-			(if (null? acc)
-			a
-			(cons a acc)))
-		'()
-		x))))
+	(let ((null? null?)
+		(car car)
+		(cdr cdr)
+		(cons cons)
+		(apply apply))
+	(letrec ((cons-loop  (lambda list
+	(if (null? (cdr list))
+		(car list)
+		(cons (car list)
+			(apply cons* (cdr list)))))))
+		cons-loop)))
 
 (define append
   (let ((null? null?)
